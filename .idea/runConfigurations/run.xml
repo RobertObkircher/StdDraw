@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="run" type="Stack Run Configuration" factoryName="Haskell Stack Run" singleton="true">
+    <option name="EXECUTABLE" value="/usr/bin/stack" />
+    <option name="EXECUTABLE_ARGUMENTS" value="run" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
