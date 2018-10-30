@@ -92,10 +92,10 @@ data DrawState = DrawState
   , xmax           :: Double
   , ymax           :: Double
   , font           :: String
-  , isMousePressed :: Bool
+  , mousePressed :: Bool
   , mouseX         :: Double
   , mouseY         :: Double
-  , keysTyped      :: [Char] -- queue of typed key characters
+  , keysTyped      :: [Char] -- ^ Opposite direction than Java, queue of typed key characters
   , keysDown       :: [Integer] -- set of key codes currently pressed down
   }
 
@@ -112,7 +112,7 @@ makeState DrawConfig {..} =
     , xmax = defaultXMax
     , ymax = defaultYMax
     , font = defaultFont
-    , isMousePressed = False
+    , mousePressed = False
     , mouseX = 0
     , mouseY = 0
     , keysTyped = []
@@ -376,62 +376,45 @@ setRGBPenColor :: GLubyte -- ^ the amount of red (between 0 and 255)
 setRGBPenColor r g b = do
   setPenColor $ Color3 r g b
 
---     /**
---      * Returns the current font.
---      *
---      * @return the current font
---      */
---     public static Font getFont() {
---         return font;
---     }
---     /**
---      * Sets the font to the default font (sans serif, 16 point).
---      */
---     public static void setFont() {
---         setFont(DEFAULT_FONT);
---     }
---     /**
---      * Sets the font to the specified value.
---      *
---      * @param font the font
---      */
---     public static void setFont(Font font) {
---         if (font == null) throw new IllegalArgumentException();
---         StdDraw.font = font;
---     }
---     /**
---      * Draws a line segment between (<em>x</em><sub>0</sub>, <em>y</em><sub>0</sub>) and
---      * (<em>x</em><sub>1</sub>, <em>y</em><sub>1</sub>).
---      *
---      * @param  x0 the <em>x</em>-coordinate of one endpoint
---      * @param  y0 the <em>y</em>-coordinate of one endpoint
---      * @param  x1 the <em>x</em>-coordinate of the other endpoint
---      * @param  y1 the <em>y</em>-coordinate of the other endpoint
---      */
---     public static void line(double x0, double y0, double x1, double y1) {
+-- | Returns the current font.
+getFont :: DrawApp String
+getFont = do
+  f <- gets font
+  return f
+
+-- | Sets the font to the default font (sans serif, 16 point).
+setDefaultFont :: DrawApp ()
+setDefaultFont = do
+  f <- asks defaultFont
+  setFont f
+
+-- | Sets the font to the specified value.
+setFont :: String -> DrawApp ()
+setFont f = do
+  modify (\s -> s {font = f})
+
+-- | Draws a line segment between ('x0', 'y0') and ('x1', 'y1').
 --         offscreen.draw(new Line2D.Double(scaleX(x0), scaleY(y0), scaleX(x1), scaleY(y1)));
 --         draw();
---     }
---     /**
---      * Draws one pixel at (<em>x</em>, <em>y</em>).
---      * This method is private because pixels depend on the display.
---      * To achieve the same effect, set the pen radius to 0 and call {@code point()}.
---      *
---      * @param  x the <em>x</em>-coordinate of the pixel
---      * @param  y the <em>y</em>-coordinate of the pixel
---      */
---     private static void pixel(double x, double y) {
+line :: Double -- ^ x0 the 'x'-coordinate of one endpoint
+     -> Double -- ^ y0 the 'y'-coordinate of one endpoint
+     -> Double -- ^ x1 the 'x'-coordinate of the other endpoint
+     -> Double -- ^ y1 the 'y'-coordinate of the other endpoint
+     -> DrawApp ()
+line = undefined
+
+-- | Draws one pixel at ('x', 'y').
+-- | This method is private because pixels depend on the display.
+-- | To achieve the same effect, set the pen radius to 0 and call 'point'.
 --         offscreen.fillRect((int) Math.round(scaleX(x)), (int) Math.round(scaleY(y)), 1, 1);
---     }
---     /**
---      * Draws a point centered at (<em>x</em>, <em>y</em>).
---      * The point is a filled circle whose radius is equal to the pen radius.
---      * To draw a single-pixel point, first set the pen radius to 0.
---      *
---      * @param x the <em>x</em>-coordinate of the point
---      * @param y the <em>y</em>-coordinate of the point
---      */
---     public static void point(double x, double y) {
+pixel :: Double -- ^ the 'x'-coordinate of the pixel
+      -> Double -- ^ the 'y'-coordinate of the pixel
+      -> DrawApp()
+pixel x y = undefined
+
+-- | Draws a point centered at (<em>x</em>, <em>y</em>).
+-- | The point is a filled circle whose radius is equal to the pen radius.
+-- | To draw a single-pixel point, first set the pen radius to 0.
 --         double xs = scaleX(x);
 --         double ys = scaleY(y);
 --         double r = penRadius;
@@ -444,15 +427,12 @@ setRGBPenColor r g b = do
 --         else offscreen.fill(new Ellipse2D.Double(xs - scaledPenRadius/2, ys - scaledPenRadius/2,
 --                                                  scaledPenRadius, scaledPenRadius));
 --         draw();
---     }
---     /**
---      * Draws a circle of the specified radius, centered at (<em>x</em>, <em>y</em>).
---      *
---      * @param  x the <em>x</em>-coordinate of the center of the circle
---      * @param  y the <em>y</em>-coordinate of the center of the circle
---      * @param  radius the radius of the circle
---      * @throws IllegalArgumentException if {@code radius} is negative
---      */
+point :: Double -- ^the 'x'-coordinate of the point
+      -> Double -- ^the 'y'-coordinate of the point
+      -> DrawApp()
+point x y = undefined
+
+-- | Draws a circle of the specified radius, centered at ('x', 'y').
 --     public static void circle(double x, double y, double radius) {
 --         if (!(radius >= 0)) throw new IllegalArgumentException("radius must be nonnegative");
 --         double xs = scaleX(x);
@@ -463,9 +443,13 @@ setRGBPenColor r g b = do
 --         else offscreen.draw(new Ellipse2D.Double(xs - ws/2, ys - hs/2, ws, hs));
 --         draw();
 --     }
---     /**
+circle :: Double -- ^ the 'x'-coordinate of the center of the circle
+       -> Double -- ^ the 'y'-coordinate of the center of the circle
+       -> Double -- ^ radius the radius of the circle
+       -> DrawApp()
+circle x y r = undefined
+
 --      * Draws a filled circle of the specified radius, centered at (<em>x</em>, <em>y</em>).
---      *
 --      * @param  x the <em>x</em>-coordinate of the center of the circle
 --      * @param  y the <em>y</em>-coordinate of the center of the circle
 --      * @param  radius the radius of the circle
@@ -902,65 +886,42 @@ setRGBPenColor r g b = do
 --         offscreen.drawString(text, (float) (xs - ws), (float) (ys + hs));
 --         draw();
 --     }
---     /**
---      * Copies the offscreen buffer to the onscreen buffer, pauses for t milliseconds
---      * and enables double buffering.
---      * @param t number of milliseconds
---      * @deprecated replaced by {@link #enableDoubleBuffering()}, {@link #show()}, and {@link #pause(int t)}
---      */
---     @Deprecated
---     public static void show(int t) {
---         show();
---         pause(t);
---         enableDoubleBuffering();
---     }
---     /**
---      * Pause for t milliseconds. This method is intended to support computer animations.
---      * @param t number of milliseconds
---      */
---     public static void pause(int t) {
---         try {
---             Thread.sleep(t);
---         }
---         catch (InterruptedException e) {
---             System.out.println("Error sleeping");
---         }
---     }
---
---     /**
---      * Copies offscreen buffer to onscreen buffer. There is no reason to call
---      * this method unless double buffering is enabled.
---      */
---     public static void show() {
+
+
+-- | Pause for t milliseconds. This method is intended to support computer animations.
+pause :: Integer -- ^ number of milliseconds
+      -> DrawApp ()
+pause t = undefined
+
+-- | Copies offscreen buffer to onscreen buffer. There is no reason to call
+-- | this method unless double buffering is enabled.
 --         onscreen.drawImage(offscreenImage, 0, 0, null);
 --         frame.repaint();
---     }
---
---     // draw onscreen if defer is false
---     private static void draw() {
---         if (!defer) show();
---     }
---
---     /**
---      * Enable double buffering. All subsequent calls to
---      * drawing methods such as {@code line()}, {@code circle()},
---      * and {@code square()} will be deffered until the next call
---      * to show(). Useful for animations.
---      */
---     public static void enableDoubleBuffering() {
---         defer = true;
---     }
---
---     /**
---      * Disable double buffering. All subsequent calls to
---      * drawing methods such as {@code line()}, {@code circle()},
---      * and {@code square()} will be displayed on screen when called.
---      * This is the default.
---      */
---     public static void disableDoubleBuffering() {
---         defer = false;
---     }
---
+showBuffer :: DrawApp ()
+showBuffer = undefined
+
+
+privateShow :: DrawApp ()
+privateShow = do
+  d <- gets defer
+  when (not d) showBuffer
+
+-- | Enable double buffering. All subsequent calls to
+-- | drawing methods such as {@code line()}, {@code circle()},
+-- | and {@code square()} will be deffered until the next call
+-- | to show(). Useful for animations.
+enableDoubleBuffering :: DrawApp ()
+enableDoubleBuffering = do
+  modify (\s -> s { defer = True })
+
+-- | Disable double buffering. All subsequent calls to
+-- | drawing methods such as {@code line()}, {@code circle()},
+-- | and {@code square()} will be displayed on screen when called.
+-- | This is the default.
+disableDoubleBuffering :: DrawApp ()
+disableDoubleBuffering = do
+  modify (\s -> s { defer = False })
+
 --
 --    /***************************************************************************
 --     *  Save drawing to a file.
@@ -1027,82 +988,26 @@ setRGBPenColor r g b = do
 --         }
 --     }
 --
---
---    /***************************************************************************
---     *  Mouse interactions.
---     ***************************************************************************/
---
---     /**
---      * Returns true if the mouse is being pressed.
---      *
---      * @return {@code true} if the mouse is being pressed; {@code false} otherwise
---      */
---     public static boolean isMousePressed() {
---         synchronized (mouseLock) {
---             return isMousePressed;
---         }
---     }
---
---     /**
---      * Returns true if the mouse is being pressed.
---      *
---      * @return {@code true} if the mouse is being pressed; {@code false} otherwise
---      * @deprecated replaced by {@link #isMousePressed()}
---      */
---     @Deprecated
---     public static boolean mousePressed() {
---         synchronized (mouseLock) {
---             return isMousePressed;
---         }
---     }
---
---     /**
---      * Returns the <em>x</em>-coordinate of the mouse.
---      *
---      * @return the <em>x</em>-coordinate of the mouse
---      */
---     public static double mouseX() {
---         synchronized (mouseLock) {
---             return mouseX;
---         }
---     }
---
---     /**
---      * Returns the <em>y</em>-coordinate of the mouse.
---      *
---      * @return <em>y</em>-coordinate of the mouse
---      */
---     public static double mouseY() {
---         synchronized (mouseLock) {
---             return mouseY;
---         }
---     }
---
---
---     /**
---      * This method cannot be called directly.
---      */
---     @Override
---     public void mouseClicked(MouseEvent e) {
---         // this body is intentionally left empty
---     }
---
---     /**
---      * This method cannot be called directly.
---      */
---     @Override
---     public void mouseEntered(MouseEvent e) {
---         // this body is intentionally left empty
---     }
---
---     /**
---      * This method cannot be called directly.
---      */
---     @Override
---     public void mouseExited(MouseEvent e) {
---         // this body is intentionally left empty
---     }
---
+
+-- | Returns true if the mouse is being pressed.
+isMousePressed :: DrawApp Bool
+isMousePressed = do
+  p <- gets mousePressed
+  return p
+
+
+-- | Returns the 'x'-coordinate of the mouse.
+getMouseX :: DrawApp Double
+getMouseX = do
+  x <- gets mouseX
+  return x
+
+-- | Returns the 'y'-coordinate of the mouse.
+getMouseY :: DrawApp Double
+getMouseY = do
+  y <- gets mouseY
+  return y
+
 --     /**
 --      * This method cannot be called directly.
 --      */
@@ -1147,95 +1052,49 @@ setRGBPenColor r g b = do
 --         }
 --     }
 --
---
---    /***************************************************************************
---     *  Keyboard interactions.
---     ***************************************************************************/
---
---     /**
---      * Returns true if the user has typed a key (that has not yet been processed).
---      *
---      * @return {@code true} if the user has typed a key (that has not yet been processed
---      *         by {@link #nextKeyTyped()}; {@code false} otherwise
---      */
---     public static boolean hasNextKeyTyped() {
---         synchronized (keyLock) {
---             return !keysTyped.isEmpty();
---         }
---     }
---
---     /**
---      * Returns the next key that was typed by the user (that your program has not already processed).
---      * This method should be preceded by a call to {@link #hasNextKeyTyped()} to ensure
---      * that there is a next key to process.
---      * This method returns a Unicode character corresponding to the key
---      * typed (such as {@code 'a'} or {@code 'A'}).
---      * It cannot identify action keys (such as F1 and arrow keys)
---      * or modifier keys (such as control).
---      *
---      * @return the next key typed by the user (that your program has not already processed).
---      * @throws NoSuchElementException if there is no remaining key
---      */
---     public static char nextKeyTyped() {
---         synchronized (keyLock) {
---             if (keysTyped.isEmpty()) {
---                 throw new NoSuchElementException("your program has already processed all keystrokes");
---             }
---             return keysTyped.remove(keysTyped.size() - 1);
---             // return keysTyped.removeLast();
---         }
---     }
---
---     /**
---      * Returns true if the given key is being pressed.
---      * <p>
---      * This method takes the keycode (corresponding to a physical key)
---     *  as an argument. It can handle action keys
---      * (such as F1 and arrow keys) and modifier keys (such as shift and control).
---      * See {@link KeyEvent} for a description of key codes.
---      *
---      * @param  keycode the key to check if it is being pressed
---      * @return {@code true} if {@code keycode} is currently being pressed;
---      *         {@code false} otherwise
---      */
---     public static boolean isKeyPressed(int keycode) {
---         synchronized (keyLock) {
---             return keysDown.contains(keycode);
---         }
---     }
---
---
---     /**
---      * This method cannot be called directly.
---      */
---     @Override
---     public void keyTyped(KeyEvent e) {
---         synchronized (keyLock) {
---             keysTyped.addFirst(e.getKeyChar());
---         }
---     }
---
---     /**
---      * This method cannot be called directly.
---      */
---     @Override
---     public void keyPressed(KeyEvent e) {
---         synchronized (keyLock) {
---             keysDown.add(e.getKeyCode());
---         }
---     }
---
---     /**
---      * This method cannot be called directly.
---      */
---     @Override
---     public void keyReleased(KeyEvent e) {
---         synchronized (keyLock) {
---             keysDown.remove(e.getKeyCode());
---         }
---     }
---
---
---
---
--- -}
+
+-- | Returns true if the user has typed a key (that has not yet been processed).
+hasNextKeyTyped :: DrawApp Bool
+hasNextKeyTyped = do
+  kt <- gets keysTyped
+  return (kt /= [])
+
+-- | Returns the next key that was typed by the user (that your program has not already processed).
+-- | This method should be preceded by a call to {@link #hasNextKeyTyped()} to ensure
+-- | that there is a next key to process.
+-- | This method returns a Unicode character corresponding to the key
+-- | typed (such as {@code 'a'} or {@code 'A'}).
+-- | It cannot identify action keys (such as F1 and arrow keys)
+-- | or modifier keys (such as control).
+nextKeyTypedUnsafe :: DrawApp Char
+nextKeyTypedUnsafe = do
+  (x:xs) <- gets keysTyped
+  modify (\s -> s {keysTyped = xs})
+  return x
+
+-- | Returns true if the given key is being pressed.
+-- | This method takes the keycode (corresponding to a physical key)
+-- |  as an argument. It can handle action keys
+-- | (such as F1 and arrow keys) and modifier keys (such as shift and control).
+isKeyPressed :: Integer -- ^ the key to check if it is being pressed
+             -> DrawApp Bool
+isKeyPressed keycode = do
+  keys <- gets keysDown
+  return $ keycode `elem` keys
+
+-- | This method cannot be called directly.
+keyTyped :: Char -> DrawApp ()
+keyTyped c = do
+  modify (\s -> s {keysTyped = (keysTyped s) ++ [c]})
+
+
+-- | This method cannot be called directly.
+keyPressed :: Integer -> DrawApp ()
+keyPressed keycode = do
+  modify (\s -> s {keysDown = keycode : (keysDown s)})
+
+-- | This method cannot be called directly.
+keyReleased :: Integer -> DrawApp ()
+keyReleased keycode = do
+  modify (\s -> s {keysDown = filter (/= keycode) (keysDown s)})
+
