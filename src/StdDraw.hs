@@ -12,7 +12,7 @@ import           Control.Monad.State    (MonadState, StateT, get, gets, modify,
 import           Data.Default
 import           Graphics.UI.GLUT       (ClearBuffer (ColorBuffer, DepthBuffer),
                                          Color3 (..), Color4 (..), GLubyte,
-                                         clear, clearColor, ($=))
+                                         clear, clearColor, ($=), swapBuffers)
 
 type Color = Color3 GLubyte
 
@@ -890,7 +890,8 @@ pause t = undefined
 --         onscreen.drawImage(offscreenImage, 0, 0, null);
 --         frame.repaint();
 showBuffer :: DrawApp ()
-showBuffer = undefined
+showBuffer = do
+  swapBuffers
 
 
 privateShow :: DrawApp ()
