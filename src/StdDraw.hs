@@ -1,21 +1,18 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE RecordWildCards            #-}
 
-module StdDraw
-  ( runDrawApp
-  , DrawApp
-  , DrawState
-  , DrawConfig
-  ) where
+module StdDraw where
 
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader   (MonadReader, ReaderT, asks, runReaderT,
                                          when)
-import           Control.Monad.State    (MonadState, StateT, modify, put,
-                                         runStateT, gets, get)
+import           Control.Monad.State    (MonadState, StateT, get, gets, modify,
+                                         put, runStateT)
 import           Data.Default
-import           Graphics.UI.GLUT       (Color3 (..), GLubyte)
+import           Graphics.UI.GLUT       (ClearBuffer (ColorBuffer, DepthBuffer),
+                                         Color3 (..), Color4 (..), GLubyte,
+                                         clear, clearColor, ($=))
 
 type Color = Color3 GLubyte
 
@@ -82,21 +79,21 @@ instance Default DrawConfig where
       }
 
 data DrawState = DrawState
-  { width          :: Integer
-  , height         :: Integer
-  , penColor       :: Color
-  , penRadius      :: Double
-  , defer          :: Bool -- show we draw immediately or wait until next show?
-  , xmin           :: Double
-  , ymin           :: Double
-  , xmax           :: Double
-  , ymax           :: Double
-  , font           :: String
+  { width        :: Integer
+  , height       :: Integer
+  , penColor     :: Color
+  , penRadius    :: Double
+  , defer        :: Bool -- show we draw immediately or wait until next show?
+  , xmin         :: Double
+  , ymin         :: Double
+  , xmax         :: Double
+  , ymax         :: Double
+  , font         :: String
   , mousePressed :: Bool
-  , mouseX         :: Double
-  , mouseY         :: Double
-  , keysTyped      :: [Char] -- ^ Opposite direction than Java, queue of typed key characters
-  , keysDown       :: [Integer] -- set of key codes currently pressed down
+  , mouseX       :: Double
+  , mouseY       :: Double
+  , keysTyped    :: [Char] -- ^ Opposite direction than Java, queue of typed key characters
+  , keysDown     :: [Integer] -- set of key codes currently pressed down
   }
 
 makeState :: DrawConfig -> DrawState
@@ -306,18 +303,13 @@ userY y = do
 clearDefault :: DrawApp ()
 clearDefault = do
   c <- asks defaultClearColor
-  clear c
+  StdDraw.clear c
 
 -- | Clears the screen to the specified color.
--- |   public static void clear(Color color) {
--- |       offscreen.setColor(color);
--- |       offscreen.fillRect(0, 0, width, height);
--- |       offscreen.setColor(penColor);
--- |       draw();
--- |   }
 clear :: Color -> DrawApp ()
-clear c = undefined
-
+clear (Color3 r g b) = do
+  clearColor $= Color4 ((fromIntegral r)/255.0) ((fromIntegral g)/255.0) ((fromIntegral b)/255.0) 1.0
+  liftIO $ Graphics.UI.GLUT.clear [ColorBuffer, DepthBuffer]
 
 -- | Returns the current pen radius.
 getPenRadius :: DrawApp Double
