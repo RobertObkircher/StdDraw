@@ -588,60 +588,34 @@ square :: Float -- ^ the 'x'-coordinate of the center of the square
        -> Float -- ^ the 'y'-coordinate of the center of the square
        -> Float -- ^ halfLength one half the length of any side of the square
        -> DrawApp ()
-square x y halfLength = do
-  -- TODO draw pixel if very small...
-  polygon [x - halfLength, x - halfLength, x + halfLength, x + halfLength] [y + halfLength, y - halfLength, y - halfLength, y + halfLength]
+square x y halfLength = rectangle x y halfLength halfLength
 
 -- | Draws a filled square of the specified size, centered at ('x', 'y').
 filledSquare :: Float -- ^ the 'x'-coordinate of the center of the square
        -> Float -- ^ the 'y'-coordinate of the center of the square
        -> Float -- ^ halfLength one half the length of any side of the square
        -> DrawApp ()
+filledSquare x y halfLength = filledRectangle x y halfLength halfLength
 
-filledSquare x y halfLength = do
+-- | Draws a rectangle of the specified size, centered at (<em>x</em>, <em>y</em>).
+rectangle :: Float -- ^ the 'x'-coordinate of the center of the rectangle
+          -> Float -- ^ the 'y'-coordinate of the center of the rectangle
+          -> Float -- ^ halfWidth one half the width of the rectangle
+          -> Float -- ^ halfHeight one half the height of the rectangle
+          -> DrawApp ()
+rectangle x y hw hh =
   -- TODO draw pixel if very small...
-  polygon [x - halfLength, x - halfLength, x + halfLength, x + halfLength] [y + halfLength, y - halfLength, y - halfLength, y + halfLength]
+  polygon [x - hw, x - hw, x + hw, x + hw] [y + hh, y - hh, y - hh, y + hh]
 
---      * Draws a rectangle of the specified size, centered at (<em>x</em>, <em>y</em>).
---      *
---      * @param  x the <em>x</em>-coordinate of the center of the rectangle
---      * @param  y the <em>y</em>-coordinate of the center of the rectangle
---      * @param  halfWidth one half the width of the rectangle
---      * @param  halfHeight one half the height of the rectangle
---      * @throws IllegalArgumentException if either {@code halfWidth} or {@code halfHeight} is negative
---      */
---     public static void rectangle(double x, double y, double halfWidth, double halfHeight) {
---         if (!(halfWidth  >= 0)) throw new IllegalArgumentException("half width must be nonnegative");
---         if (!(halfHeight >= 0)) throw new IllegalArgumentException("half height must be nonnegative");
---         double xs = scaleX(x);
---         double ys = scaleY(y);
---         double ws = factorX(2*halfWidth);
---         double hs = factorY(2*halfHeight);
---         if (ws <= 1 && hs <= 1) pixel(x, y);
---         else offscreen.draw(new Rectangle2D.Double(xs - ws/2, ys - hs/2, ws, hs));
---         draw();
---     }
---     /**
---      * Draws a filled rectangle of the specified size, centered at (<em>x</em>, <em>y</em>).
---      *
---      * @param  x the <em>x</em>-coordinate of the center of the rectangle
---      * @param  y the <em>y</em>-coordinate of the center of the rectangle
---      * @param  halfWidth one half the width of the rectangle
---      * @param  halfHeight one half the height of the rectangle
---      * @throws IllegalArgumentException if either {@code halfWidth} or {@code halfHeight} is negative
---      */
---     public static void filledRectangle(double x, double y, double halfWidth, double halfHeight) {
---         if (!(halfWidth  >= 0)) throw new IllegalArgumentException("half width must be nonnegative");
---         if (!(halfHeight >= 0)) throw new IllegalArgumentException("half height must be nonnegative");
---         double xs = scaleX(x);
---         double ys = scaleY(y);
---         double ws = factorX(2*halfWidth);
---         double hs = factorY(2*halfHeight);
---         if (ws <= 1 && hs <= 1) pixel(x, y);
---         else offscreen.fill(new Rectangle2D.Double(xs - ws/2, ys - hs/2, ws, hs));
---         draw();
---     }
-
+-- | Draws a filled rectangle of the specified size, centered at ('x', 'y').
+filledRectangle :: Float -- ^ the 'x'-coordinate of the center of the rectangle
+          -> Float -- ^ the 'y'-coordinate of the center of the rectangle
+          -> Float -- ^ halfWidth one half the width of the rectangle
+          -> Float -- ^ halfHeight one half the height of the rectangle
+          -> DrawApp ()
+filledRectangle x y hw hh =
+  -- TODO draw pixel if very small...
+  filledPolygon [x - hw, x - hw, x + hw, x + hw] [y + hh, y - hh, y - hh, y + hh]
 
 -- | Draws a polygon with the vertices
 -- |   ('x0', 'y0),
