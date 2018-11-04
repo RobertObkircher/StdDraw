@@ -1,9 +1,9 @@
 module Main where
 
-import StdDraw
-import StdDraw.Colors
-import Data.Default
-import Control.Monad
+import           Control.Monad
+import           Data.Default
+import           StdDraw
+import           StdDraw.Colors
 
 -- test = do
 ---  square 0.2 0.8 0.1

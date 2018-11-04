@@ -4,23 +4,22 @@
 
 module StdDraw where
 
-import Control.Concurrent (threadDelay)
-import           Control.Monad.IO.Class (MonadIO, liftIO)
-import           Control.Monad.Reader   (MonadReader, ReaderT, asks, runReaderT,
-                                         when)
-import           Control.Monad.State    (MonadState, StateT, get, gets, modify,
-                                         put, runStateT)
+import           Control.Concurrent        (forkIO, threadDelay)
+import           Control.Concurrent.STM    (TChan, atomically, isEmptyTChan,
+                                            newTChanIO, readTChan, tryReadTChan,
+                                            writeTChan)
 import           Data.Default
-
-import Control.Concurrent (forkIO)
-
+import           Control.Exception         (finally)
+import           Control.Monad.IO.Class    (MonadIO, liftIO)
+import           Control.Monad.Reader      (MonadReader, ReaderT, asks,
+                                            runReaderT, when)
+import           Control.Monad.State       (MonadState, StateT, get, gets,
+                                            modify, put, runStateT)
+import           Graphics.Rendering.OpenGL (($=))
 import qualified Graphics.Rendering.OpenGL as GL
-import qualified Graphics.UI.GLFW as GLFW
-import Graphics.Rendering.OpenGL (($=))
-import Control.Concurrent.STM (TChan, newTChanIO, atomically, writeTChan, isEmptyTChan, readTChan, tryReadTChan)
-import Control.Exception (finally)
+import qualified Graphics.UI.GLFW          as GLFW
 
-import StdDraw.Colors
+import           StdDraw.Colors
 
 -- | TODO Move to util?
 verticesUnsafe :: [Float] -> [Float] -> [GL.Vertex3 GL.GLfloat]
@@ -856,15 +855,9 @@ disableDoubleBuffering :: DrawApp ()
 disableDoubleBuffering = do
   modify (\s -> s { defer = False })
 
---
---    /***************************************************************************
---     *  Save drawing to a file.
---     ***************************************************************************/
---
---     /**
---      * Saves the drawing to using the specified filename.
---      * The supported image formats are JPEG and PNG;
---      * the filename suffix must be {@code .jpg} or {@code .png}.
+-- | Saves the drawing to using the specified filename.
+-- | The supported image formats are JPEG and PNG;
+-- | the filename suffix must be {@code .jpg} or {@code .png}.
 --      *
 --      * @param  filename the name of the file with one of the required suffixes
 --      */
@@ -1026,7 +1019,7 @@ readPressedKeys chan = do
 
 -- | This method cannot be called directly.
 keyEvent :: KeyEvent -> DrawApp ()
-keyEvent (KeyUp k) = keyReleased k
+keyEvent (KeyUp k)   = keyReleased k
 keyEvent (KeyDown k) = keyPressed k
 
 -- | This method cannot be called directly.
