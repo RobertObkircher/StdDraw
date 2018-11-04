@@ -5,8 +5,8 @@ import Data.Default
 import Control.Monad
 
 -- test = do
---   square 0.2 0.8 0.1
---   filledSquare 0.8 0.8 0.2
+---  square 0.2 0.8 0.1
+---  filledSquare 0.8 0.8 0.2
 --   circle 0.8 0.2 0.2
 --
 --   setPenColor bookRed
@@ -16,9 +16,9 @@ import Control.Monad
 --   // draw a blue diamond
 --   setPenRadius
 --   setPenColor bookBlue
---   let x = [ 0.1, 0.2, 0.3, 0.2 ]
---       y = [ 0.2, 0.3, 0.2, 0.1 ]
---   filledPolygon x y
+---  let x = [ 0.1, 0.2, 0.3, 0.2 ]
+---      y = [ 0.2, 0.3, 0.2, 0.1 ]
+---  filledPolygon x y
 --
 --   setPenColor black
 --   text 0.2 0.5 "black text"
@@ -37,6 +37,9 @@ draw :: DrawApp ()
 draw = do
   forever $ do
     clearDefault
+
+    square 0.2 0.8 0.1
+    filledSquare 0.8 0.8 0.2
 
     let x = [ 0.1, 0.2, 0.3, 0.2 ]
         y = [ 0.2, 0.3, 0.2, 0.1 ]

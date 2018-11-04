@@ -582,43 +582,26 @@ circle x y r = undefined
 --         else offscreen.draw(new Arc2D.Double(xs - ws/2, ys - hs/2, ws, hs, angle1, angle2 - angle1, Arc2D.OPEN));
 --         draw();
 --     }
---     /**
---      * Draws a square of side length 2r, centered at (<em>x</em>, <em>y</em>).
---      *
---      * @param  x the <em>x</em>-coordinate of the center of the square
---      * @param  y the <em>y</em>-coordinate of the center of the square
---      * @param  halfLength one half the length of any side of the square
---      * @throws IllegalArgumentException if {@code halfLength} is negative
---      */
---     public static void square(double x, double y, double halfLength) {
---         if (!(halfLength >= 0)) throw new IllegalArgumentException("half length must be nonnegative");
---         double xs = scaleX(x);
---         double ys = scaleY(y);
---         double ws = factorX(2*halfLength);
---         double hs = factorY(2*halfLength);
---         if (ws <= 1 && hs <= 1) pixel(x, y);
---         else offscreen.draw(new Rectangle2D.Double(xs - ws/2, ys - hs/2, ws, hs));
---         draw();
---     }
---     /**
---      * Draws a filled square of the specified size, centered at (<em>x</em>, <em>y</em>).
---      *
---      * @param  x the <em>x</em>-coordinate of the center of the square
---      * @param  y the <em>y</em>-coordinate of the center of the square
---      * @param  halfLength one half the length of any side of the square
---      * @throws IllegalArgumentException if {@code halfLength} is negative
---      */
---     public static void filledSquare(double x, double y, double halfLength) {
---         if (!(halfLength >= 0)) throw new IllegalArgumentException("half length must be nonnegative");
---         double xs = scaleX(x);
---         double ys = scaleY(y);
---         double ws = factorX(2*halfLength);
---         double hs = factorY(2*halfLength);
---         if (ws <= 1 && hs <= 1) pixel(x, y);
---         else offscreen.fill(new Rectangle2D.Double(xs - ws/2, ys - hs/2, ws, hs));
---         draw();
---     }
---     /**
+
+-- | Draws a square of side length 2r, centered at ('x', 'y').
+square :: Float -- ^ the 'x'-coordinate of the center of the square
+       -> Float -- ^ the 'y'-coordinate of the center of the square
+       -> Float -- ^ halfLength one half the length of any side of the square
+       -> DrawApp ()
+square x y halfLength = do
+  -- TODO draw pixel if very small...
+  polygon [x - halfLength, x - halfLength, x + halfLength, x + halfLength] [y + halfLength, y - halfLength, y - halfLength, y + halfLength]
+
+-- | Draws a filled square of the specified size, centered at ('x', 'y').
+filledSquare :: Float -- ^ the 'x'-coordinate of the center of the square
+       -> Float -- ^ the 'y'-coordinate of the center of the square
+       -> Float -- ^ halfLength one half the length of any side of the square
+       -> DrawApp ()
+
+filledSquare x y halfLength = do
+  -- TODO draw pixel if very small...
+  polygon [x - halfLength, x - halfLength, x + halfLength, x + halfLength] [y + halfLength, y - halfLength, y - halfLength, y + halfLength]
+
 --      * Draws a rectangle of the specified size, centered at (<em>x</em>, <em>y</em>).
 --      *
 --      * @param  x the <em>x</em>-coordinate of the center of the rectangle
