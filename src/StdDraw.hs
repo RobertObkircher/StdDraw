@@ -4,6 +4,7 @@
 
 module StdDraw where
 
+import Control.Concurrent (threadDelay)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader   (MonadReader, ReaderT, asks, runReaderT,
                                          when)
@@ -819,9 +820,10 @@ filledPolygon xs ys = do
 
 
 -- | Pause for t milliseconds. This method is intended to support computer animations.
-pause :: Integer -- ^ number of milliseconds
+pause :: Int -- ^ number of milliseconds
       -> DrawApp ()
-pause t = undefined
+pause t = do
+  liftIO $ threadDelay (t * 1000)
 
 -- | Copies offscreen buffer to onscreen buffer. There is no reason to call
 -- | this method unless double buffering is enabled.
