@@ -1,6 +1,7 @@
 module Main where
 
 import StdDraw
+import StdDraw.Colors
 import Data.Default
 import Control.Monad
 
@@ -30,7 +31,7 @@ main = withWindow "Hello, world!" conf draw
 
 conf :: DrawConfig
 conf = def
-  { defaultClearColor = green def
+  { defaultClearColor = green
   }
 
 draw :: DrawApp ()

@@ -19,6 +19,8 @@ import Graphics.Rendering.OpenGL (($=))
 import Control.Concurrent.STM (TChan, newTChanIO, atomically, writeTChan, isEmptyTChan, readTChan, tryReadTChan)
 import Control.Exception (finally)
 
+import StdDraw.Colors
+
 -- | TODO Move to util?
 verticesUnsafe :: [Float] -> [Float] -> [GL.Vertex3 GL.GLfloat]
 verticesUnsafe xs ys
@@ -39,24 +41,7 @@ type Color = GL.Color3 GL.GLubyte
 data KeyEvent = KeyUp GLFW.Key | KeyDown GLFW.Key
 
 data DrawConfig = DrawConfig
-  { black             :: Color
-  , blue              :: Color
-  , cyan              :: Color
-  , darkGray          :: Color
-  , gray              :: Color
-  , green             :: Color
-  , lightGray         :: Color
-  , magenta           :: Color
-  , orange            :: Color
-  , pink              :: Color
-  , red               :: Color
-  , white             :: Color
-  , yellow            :: Color
-  , bookBlue          :: Color
-  , bookLightBlue     :: Color
-  , bookRed           :: Color
-  , princetonOrange   :: Color
-  , defaultPenColor   :: Color
+  { defaultPenColor   :: Color
   , defaultClearColor :: Color
   , defaultSize       :: Int
   , defaultPenRadius  :: Double
@@ -71,25 +56,8 @@ data DrawConfig = DrawConfig
 instance Default DrawConfig where
   def =
     DrawConfig
-      { black = GL.Color3 0 0 0
-      , blue = GL.Color3 0 0 255
-      , cyan = GL.Color3 0 255 255
-      , darkGray = GL.Color3 64 64 64
-      , gray = GL.Color3 128 128 128
-      , green = GL.Color3 0 255 0
-      , lightGray = GL.Color3 192 192 192
-      , magenta = GL.Color3 255 0 255
-      , orange = GL.Color3 255 200 0
-      , pink = GL.Color3 255 175 175
-      , red = GL.Color3 255 0 0
-      , white = GL.Color3 255 255 255
-      , yellow = GL.Color3 255 255 0
-      , bookBlue = GL.Color3 9 90 166
-      , bookLightBlue = GL.Color3 103 198 243
-      , bookRed = GL.Color3 150 35 31
-      , princetonOrange = GL.Color3 245 128 37
-      , defaultPenColor = GL.Color3 0 0 0 -- TODO = black?
-      , defaultClearColor = GL.Color3 255 255 255 -- TODO = white?
+      { defaultPenColor = black
+      , defaultClearColor = white
       , defaultSize = 512
       , defaultPenRadius = 0.002
       , border = 0.0
