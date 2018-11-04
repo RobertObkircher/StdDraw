@@ -7,7 +7,7 @@ import Control.Monad
 -- test = do
 ---  square 0.2 0.8 0.1
 ---  filledSquare 0.8 0.8 0.2
---   circle 0.8 0.2 0.2
+---   circle 0.8 0.2 0.2
 --
 --   setPenColor bookRed
 --   setPenRadius 0.02
@@ -40,6 +40,7 @@ draw = do
 
     square 0.2 0.8 0.1
     filledSquare 0.8 0.8 0.2
+    circle 0.8 0.2 0.2
 
     let x = [ 0.1, 0.2, 0.3, 0.2 ]
         y = [ 0.2, 0.3, 0.2, 0.1 ]

@@ -29,6 +29,11 @@ verticesUnsafe xs ys
 vertex3 :: (Float, Float) -> GL.Vertex3 GL.GLfloat
 vertex3 (x, y) = GL.Vertex3 x y 0
 
+circleVertices x y radius = fmap circleVertex [0..299]
+  where
+    circleVertex i = let angle = 2 * pi * i / 300
+                      in (x + radius * (cos angle), y + radius * (sin angle))
+
 type Color = GL.Color3 GL.GLubyte
 
 data KeyEvent = KeyUp GLFW.Key | KeyDown GLFW.Key
@@ -483,39 +488,23 @@ point :: Double -- ^the 'x'-coordinate of the point
 point x y = undefined
 
 -- | Draws a circle of the specified radius, centered at ('x', 'y').
---     public static void circle(double x, double y, double radius) {
---         if (!(radius >= 0)) throw new IllegalArgumentException("radius must be nonnegative");
---         double xs = scaleX(x);
---         double ys = scaleY(y);
---         double ws = factorX(2*radius);
---         double hs = factorY(2*radius);
---         if (ws <= 1 && hs <= 1) pixel(x, y);
---         else offscreen.draw(new Ellipse2D.Double(xs - ws/2, ys - hs/2, ws, hs));
---         draw();
---     }
-circle :: Double -- ^ the 'x'-coordinate of the center of the circle
-       -> Double -- ^ the 'y'-coordinate of the center of the circle
-       -> Double -- ^ radius the radius of the circle
+circle :: Float -- ^ the 'x'-coordinate of the center of the circle
+       -> Float -- ^ the 'y'-coordinate of the center of the circle
+       -> Float -- ^ radius the radius of the circle
        -> DrawApp()
-circle x y r = undefined
+circle x y r =
+  let (xs, ys) = unzip (circleVertices x y r)
+   in polygon xs ys
 
---      * Draws a filled circle of the specified radius, centered at (<em>x</em>, <em>y</em>).
---      * @param  x the <em>x</em>-coordinate of the center of the circle
---      * @param  y the <em>y</em>-coordinate of the center of the circle
---      * @param  radius the radius of the circle
---      * @throws IllegalArgumentException if {@code radius} is negative
---      */
---     public static void filledCircle(double x, double y, double radius) {
---         if (!(radius >= 0)) throw new IllegalArgumentException("radius must be nonnegative");
---         double xs = scaleX(x);
---         double ys = scaleY(y);
---         double ws = factorX(2*radius);
---         double hs = factorY(2*radius);
---         if (ws <= 1 && hs <= 1) pixel(x, y);
---         else offscreen.fill(new Ellipse2D.Double(xs - ws/2, ys - hs/2, ws, hs));
---         draw();
---     }
---     /**
+-- | Draws a filled circle of the specified radius, centered at ('x', 'y').
+filledCircle :: Float -- ^ the 'x'-coordinate of the center of the circle
+             -> Float -- ^ the 'y'-coordinate of the center of the circle
+             -> Float -- ^ radius the radius of the circle
+             -> DrawApp()
+filledCircle x y r =
+  let (xs, ys) = unzip (circleVertices x y r)
+   in filledPolygon xs ys
+
 --      * Draws an ellipse with the specified semimajor and semiminor axes,
 --      * centered at (<em>x</em>, <em>y</em>).
 --      *
@@ -592,9 +581,9 @@ square x y halfLength = rectangle x y halfLength halfLength
 
 -- | Draws a filled square of the specified size, centered at ('x', 'y').
 filledSquare :: Float -- ^ the 'x'-coordinate of the center of the square
-       -> Float -- ^ the 'y'-coordinate of the center of the square
-       -> Float -- ^ halfLength one half the length of any side of the square
-       -> DrawApp ()
+             -> Float -- ^ the 'y'-coordinate of the center of the square
+             -> Float -- ^ halfLength one half the length of any side of the square
+             -> DrawApp ()
 filledSquare x y halfLength = filledRectangle x y halfLength halfLength
 
 -- | Draws a rectangle of the specified size, centered at (<em>x</em>, <em>y</em>).
@@ -609,10 +598,10 @@ rectangle x y hw hh =
 
 -- | Draws a filled rectangle of the specified size, centered at ('x', 'y').
 filledRectangle :: Float -- ^ the 'x'-coordinate of the center of the rectangle
-          -> Float -- ^ the 'y'-coordinate of the center of the rectangle
-          -> Float -- ^ halfWidth one half the width of the rectangle
-          -> Float -- ^ halfHeight one half the height of the rectangle
-          -> DrawApp ()
+                -> Float -- ^ the 'y'-coordinate of the center of the rectangle
+                -> Float -- ^ halfWidth one half the width of the rectangle
+                -> Float -- ^ halfHeight one half the height of the rectangle
+                -> DrawApp ()
 filledRectangle x y hw hh =
   -- TODO draw pixel if very small...
   filledPolygon [x - hw, x - hw, x + hw, x + hw] [y + hh, y - hh, y - hh, y + hh]
@@ -632,8 +621,8 @@ polygon xs ys = do
 -- |   ('x1', 'y1), ...,
 -- |   ('xn', 'yn).
 filledPolygon :: [Float] -- ^ x an array of all the 'x'-coordinates of the polygon
-        -> [Float] -- ^ y an array of all the 'y'-coordinates of the polygon
-        -> DrawApp ()
+              -> [Float] -- ^ y an array of all the 'y'-coordinates of the polygon
+              -> DrawApp ()
 filledPolygon xs ys = do
   liftIO $ GL.renderPrimitive GL.Polygon $ mapM_ GL.vertex $ verticesUnsafe xs ys
 
@@ -1079,7 +1068,5 @@ keyPressed keycode = do
 keyReleased :: GLFW.Key -> DrawApp ()
 keyReleased keycode = do
   modify (\s -> s {keysDown = filter (/= keycode) (keysDown s)})
-
-
 
 
