@@ -10,11 +10,28 @@ import           Control.Monad.Reader   (MonadReader, ReaderT, asks, runReaderT,
 import           Control.Monad.State    (MonadState, StateT, get, gets, modify,
                                          put, runStateT)
 import           Data.Default
-import           Graphics.UI.GLUT       (ClearBuffer (ColorBuffer, DepthBuffer),
-                                         Color3 (..), Color4 (..), GLubyte,
-                                         clear, clearColor, ($=), swapBuffers)
 
-type Color = Color3 GLubyte
+import Control.Concurrent (forkIO)
+
+import qualified Graphics.Rendering.OpenGL as GL
+import qualified Graphics.UI.GLFW as GLFW
+import Graphics.Rendering.OpenGL (($=))
+import Control.Concurrent.STM (TChan, newTChanIO, atomically, writeTChan, isEmptyTChan, readTChan, tryReadTChan)
+import Control.Exception (finally)
+
+-- | TODO Move to util?
+verticesUnsafe :: [Float] -> [Float] -> [GL.Vertex3 GL.GLfloat]
+verticesUnsafe xs ys
+  | length xs == length ys = fmap vertex3 $ zip xs ys
+  | otherwise = error "Lists must have the same length"
+
+-- | TODO Move to util?
+vertex3 :: (Float, Float) -> GL.Vertex3 GL.GLfloat
+vertex3 (x, y) = GL.Vertex3 x y 0
+
+type Color = GL.Color3 GL.GLubyte
+
+data KeyEvent = KeyUp GLFW.Key | KeyDown GLFW.Key
 
 data DrawConfig = DrawConfig
   { black             :: Color
@@ -36,7 +53,7 @@ data DrawConfig = DrawConfig
   , princetonOrange   :: Color
   , defaultPenColor   :: Color
   , defaultClearColor :: Color
-  , defaultSize       :: Integer
+  , defaultSize       :: Int
   , defaultPenRadius  :: Double
   , border            :: Double -- boundary of drawing canvas, 0% border
   , defaultXMin       :: Double
@@ -49,25 +66,25 @@ data DrawConfig = DrawConfig
 instance Default DrawConfig where
   def =
     DrawConfig
-      { black = Color3 0 0 0
-      , blue = Color3 0 0 255
-      , cyan = Color3 0 255 255
-      , darkGray = Color3 64 64 64
-      , gray = Color3 128 128 128
-      , green = Color3 0 255 0
-      , lightGray = Color3 192 192 192
-      , magenta = Color3 255 0 255
-      , orange = Color3 255 200 0
-      , pink = Color3 255 175 175
-      , red = Color3 255 0 0
-      , white = Color3 255 255 255
-      , yellow = Color3 255 255 0
-      , bookBlue = Color3 9 90 166
-      , bookLightBlue = Color3 103 198 243
-      , bookRed = Color3 150 35 31
-      , princetonOrange = Color3 245 128 37
-      , defaultPenColor = Color3 0 0 0 -- TODO = black?
-      , defaultClearColor = Color3 255 255 255 -- TODO = white?
+      { black = GL.Color3 0 0 0
+      , blue = GL.Color3 0 0 255
+      , cyan = GL.Color3 0 255 255
+      , darkGray = GL.Color3 64 64 64
+      , gray = GL.Color3 128 128 128
+      , green = GL.Color3 0 255 0
+      , lightGray = GL.Color3 192 192 192
+      , magenta = GL.Color3 255 0 255
+      , orange = GL.Color3 255 200 0
+      , pink = GL.Color3 255 175 175
+      , red = GL.Color3 255 0 0
+      , white = GL.Color3 255 255 255
+      , yellow = GL.Color3 255 255 0
+      , bookBlue = GL.Color3 9 90 166
+      , bookLightBlue = GL.Color3 103 198 243
+      , bookRed = GL.Color3 150 35 31
+      , princetonOrange = GL.Color3 245 128 37
+      , defaultPenColor = GL.Color3 0 0 0 -- TODO = black?
+      , defaultClearColor = GL.Color3 255 255 255 -- TODO = white?
       , defaultSize = 512
       , defaultPenRadius = 0.002
       , border = 0.0
@@ -79,8 +96,8 @@ instance Default DrawConfig where
       }
 
 data DrawState = DrawState
-  { width        :: Integer
-  , height       :: Integer
+  { width        :: Int
+  , height       :: Int
   , penColor     :: Color
   , penRadius    :: Double
   , defer        :: Bool -- show we draw immediately or wait until next show?
@@ -92,12 +109,14 @@ data DrawState = DrawState
   , mousePressed :: Bool
   , mouseX       :: Double
   , mouseY       :: Double
-  , keysTyped    :: [Char] -- ^ Opposite direction than Java, queue of typed key characters
-  , keysDown     :: [Integer] -- set of key codes currently pressed down
+  , keysTyped    :: TChan Char
+  , keysDown     :: [GLFW.Key] -- set of key codes currently pressed down
+  , keyEvents    :: TChan KeyEvent
+  , window       :: GLFW.Window
   }
 
-makeState :: DrawConfig -> DrawState
-makeState DrawConfig {..} =
+makeState :: DrawConfig -> TChan Char -> TChan KeyEvent -> GLFW.Window -> DrawState
+makeState DrawConfig {..} keysTypedChan keyEventsChan w =
   DrawState
     { width = defaultSize
     , height = defaultSize
@@ -112,8 +131,10 @@ makeState DrawConfig {..} =
     , mousePressed = False
     , mouseX = 0
     , mouseY = 0
-    , keysTyped = []
+    , keysTyped = keysTypedChan
     , keysDown = []
+    , keyEvents = keyEventsChan
+    , window = w
     }
 
 newtype DrawApp a = DrawApp
@@ -126,10 +147,44 @@ newtype DrawApp a = DrawApp
              , Applicative
              )
 
-runDrawApp :: DrawApp a -> DrawConfig -> IO (a, DrawState)
-runDrawApp app config =
-  let state = makeState config
+runDrawApp :: DrawApp a -> DrawConfig -> TChan Char -> TChan KeyEvent -> GLFW.Window -> IO (a, DrawState)
+runDrawApp app config keysTypedChan keyEventsChan window =
+  let state = makeState config keysTypedChan keyEventsChan window
    in runStateT (runReaderT (runApp app) config) state
+
+withWindow :: String
+           -> DrawConfig
+           -> DrawApp ()
+           -> IO ()
+withWindow title conf app = do
+  True <- GLFW.init
+
+  let a = defaultSize conf
+  Just window <- GLFW.createWindow a a title Nothing Nothing
+  GLFW.makeContextCurrent (Just window)
+
+  keysTypedChan <- newTChanIO :: IO (TChan Char)
+  GLFW.setCharCallback window $ Just (charCallback keysTypedChan)
+
+  keyEventsChan <- newTChanIO :: IO (TChan KeyEvent)
+  GLFW.setKeyCallback window $ Just (keyCallback keyEventsChan)
+
+  forkIO $ pollEvents
+
+  ((), state) <- runDrawApp app conf keysTypedChan keyEventsChan window
+  GLFW.terminate
+
+pollEvents = do
+  GLFW.pollEvents
+  pollEvents
+
+charCallback :: TChan Char -> GLFW.CharCallback
+charCallback chan _ char = atomically $ writeTChan chan char
+
+keyCallback :: TChan KeyEvent -> GLFW.KeyCallback
+keyCallback chan _ key _ GLFW.KeyState'Pressed _ = atomically $ writeTChan chan $ KeyDown key
+keyCallback chan _ key _ GLFW.KeyState'Released _ = atomically $ writeTChan chan $ KeyUp key
+keyCallback _ _ _ _ _ _ = return ()
 
 -- | Sets the canvas (drawing area) to be 512-by-512 pixels.
 -- | This also erases the current drawing and resets the coordinate system,
@@ -152,7 +207,7 @@ setDefaultCanvasSize = do
 -- | @throws IllegalArgumentException unless both {@code canvasWidth} and
 -- |         {@code canvasHeight} are positive
 -- |
-setCanvasSize :: Integer -> Integer -> DrawApp ()
+setCanvasSize :: Int -> Int -> DrawApp ()
 setCanvasSize w h = do
   when (w <= 0 || h <= 0) $ error "width and height must be positive"
   modify (\s -> s {width = w, height = h})
@@ -199,8 +254,11 @@ setCanvasSize w h = do
 -- frame.setVisible(true);
 initState :: DrawApp ()
 initState = do
-  newState <- asks makeState
-  put newState
+  makeNewState <- asks makeState
+  kt <- gets keysTyped
+  ke <- gets keyEvents
+  w <- gets window
+  put $ makeNewState kt ke w
 
 -- JMenuBar menuBar = new JMenuBar();
 -- JMenu menu = new JMenu("File");
@@ -267,49 +325,49 @@ setScale min max = do
 scaleX :: Double -> DrawApp Double
 scaleX x = do
   DrawState{width, xmin, xmax} <- get
-  return $ (fromInteger width) * (x - xmin) / (xmax - xmin)
+  return $ (fromIntegral width) * (x - xmin) / (xmax - xmin)
 
 -- | Helper function that scales from user coordinates to screen coordinates and back
 scaleY :: Double -> DrawApp Double
 scaleY y = do
   DrawState{height, ymin, ymax} <- get
-  return $ (fromInteger height) * (ymax - y) / (ymax - ymin)
+  return $ (fromIntegral height) * (ymax - y) / (ymax - ymin)
 
 -- | Helper function that scales from user coordinates to screen coordinates and back
 factorX :: Double -> DrawApp Double
 factorX w = do
   DrawState{width, xmin, xmax} <- get
-  return $ w * (fromInteger width) / abs (xmax - xmin)
+  return $ w * (fromIntegral width) / abs (xmax - xmin)
 
 -- | Helper function that scales from user coordinates to screen coordinates and back
 factorY :: Double -> DrawApp Double
 factorY h = do
   DrawState{height, ymin, ymax} <- get
-  return $ h * (fromInteger height) / abs (ymax - ymin)
+  return $ h * (fromIntegral height) / abs (ymax - ymin)
 
 -- | Helper function that scales from user coordinates to screen coordinates and back
 userX :: Double -> DrawApp Double
 userX x = do
   DrawState{width, xmin, xmax} <- get
-  return $ xmin + x * (xmax - xmin) / (fromInteger width)
+  return $ xmin + x * (xmax - xmin) / (fromIntegral width)
 
 -- | Helper function that scales from user coordinates to screen coordinates and back
 userY :: Double -> DrawApp Double
 userY y = do
   DrawState{height, ymin, ymax} <- get
-  return $ ymax - y * (ymax - ymin) / (fromInteger height)
+  return $ ymax - y * (ymax - ymin) / (fromIntegral height)
 
 -- | Clears the screen to the default color (white).
 clearDefault :: DrawApp ()
 clearDefault = do
   c <- asks defaultClearColor
-  StdDraw.clear c
+  clear c
 
 -- | Clears the screen to the specified color.
 clear :: Color -> DrawApp ()
-clear (Color3 r g b) = do
-  clearColor $= Color4 ((fromIntegral r)/255.0) ((fromIntegral g)/255.0) ((fromIntegral b)/255.0) 1.0
-  liftIO $ Graphics.UI.GLUT.clear [ColorBuffer, DepthBuffer]
+clear (GL.Color3 r g b) = do
+  GL.clearColor $= GL.Color4 ((fromIntegral r)/255.0) ((fromIntegral g)/255.0) ((fromIntegral b)/255.0) 1.0
+  liftIO $ GL.clear [GL.ColorBuffer]
 
 -- | Returns the current pen radius.
 getPenRadius :: DrawApp Double
@@ -361,12 +419,12 @@ setPenColor c = do
   modify (\s -> s {penColor = c})
 
 -- | Sets the pen color to the specified RGB color.
-setRGBPenColor :: GLubyte -- ^ the amount of red (between 0 and 255)
-            -> GLubyte -- ^ the amount of green (between 0 and 255)
-            -> GLubyte -- ^ the amount of blue (between 0 and 255)
+setRGBPenColor :: GL.GLubyte -- ^ the amount of red (between 0 and 255)
+            -> GL.GLubyte -- ^ the amount of green (between 0 and 255)
+            -> GL.GLubyte -- ^ the amount of blue (between 0 and 255)
             -> DrawApp ()
 setRGBPenColor r g b = do
-  setPenColor $ Color3 r g b
+  setPenColor $ GL.Color3 r g b
 
 -- | Returns the current font.
 getFont :: DrawApp String
@@ -600,62 +658,28 @@ circle x y r = undefined
 --         else offscreen.fill(new Rectangle2D.Double(xs - ws/2, ys - hs/2, ws, hs));
 --         draw();
 --     }
---     /**
---      * Draws a polygon with the vertices
---      * (<em>x</em><sub>0</sub>, <em>y</em><sub>0</sub>),
---      * (<em>x</em><sub>1</sub>, <em>y</em><sub>1</sub>), ...,
---      * (<em>x</em><sub><em>n</em>–1</sub>, <em>y</em><sub><em>n</em>–1</sub>).
---      *
---      * @param  x an array of all the <em>x</em>-coordinates of the polygon
---      * @param  y an array of all the <em>y</em>-coordinates of the polygon
---      * @throws IllegalArgumentException unless {@code x[]} and {@code y[]}
---      *         are of the same length
---      */
---     public static void polygon(double[] x, double[] y) {
---         if (x == null) throw new IllegalArgumentException("x-coordinate array is null");
---         if (y == null) throw new IllegalArgumentException("y-coordinate array is null");
---         int n1 = x.length;
---         int n2 = y.length;
---         if (n1 != n2) throw new IllegalArgumentException("arrays must be of the same length");
---         int n = n1;
---         if (n == 0) return;
---
---         GeneralPath path = new GeneralPath();
---         path.moveTo((float) scaleX(x[0]), (float) scaleY(y[0]));
---         for (int i = 0; i < n; i++)
---             path.lineTo((float) scaleX(x[i]), (float) scaleY(y[i]));
---         path.closePath();
---         offscreen.draw(path);
---         draw();
---     }
---     /**
---      * Draws a polygon with the vertices
---      * (<em>x</em><sub>0</sub>, <em>y</em><sub>0</sub>),
---      * (<em>x</em><sub>1</sub>, <em>y</em><sub>1</sub>), ...,
---      * (<em>x</em><sub><em>n</em>–1</sub>, <em>y</em><sub><em>n</em>–1</sub>).
---      *
---      * @param  x an array of all the <em>x</em>-coordinates of the polygon
---      * @param  y an array of all the <em>y</em>-coordinates of the polygon
---      * @throws IllegalArgumentException unless {@code x[]} and {@code y[]}
---      *         are of the same length
---      */
---     public static void filledPolygon(double[] x, double[] y) {
---         if (x == null) throw new IllegalArgumentException("x-coordinate array is null");
---         if (y == null) throw new IllegalArgumentException("y-coordinate array is null");
---         int n1 = x.length;
---         int n2 = y.length;
---         if (n1 != n2) throw new IllegalArgumentException("arrays must be of the same length");
---         int n = n1;
---         if (n == 0) return;
---
---         GeneralPath path = new GeneralPath();
---         path.moveTo((float) scaleX(x[0]), (float) scaleY(y[0]));
---         for (int i = 0; i < n; i++)
---             path.lineTo((float) scaleX(x[i]), (float) scaleY(y[i]));
---         path.closePath();
---         offscreen.fill(path);
---         draw();
---     }
+
+
+-- | Draws a polygon with the vertices
+-- |   ('x0', 'y0),
+-- |   ('x1', 'y1), ...,
+-- |   ('xn', 'yn).
+polygon :: [Float] -- ^ x an array of all the 'x'-coordinates of the polygon
+        -> [Float] -- ^ y an array of all the 'y'-coordinates of the polygon
+        -> DrawApp ()
+polygon xs ys = do
+  liftIO $ GL.renderPrimitive GL.LineLoop $ mapM_ GL.vertex $ verticesUnsafe xs ys
+
+-- | Draws a polygon with the vertices
+-- |   ('x0', 'y0),
+-- |   ('x1', 'y1), ...,
+-- |   ('xn', 'yn).
+filledPolygon :: [Float] -- ^ x an array of all the 'x'-coordinates of the polygon
+        -> [Float] -- ^ y an array of all the 'y'-coordinates of the polygon
+        -> DrawApp ()
+filledPolygon xs ys = do
+  liftIO $ GL.renderPrimitive GL.Polygon $ mapM_ GL.vertex $ verticesUnsafe xs ys
+
 --     // get an image from the given filename
 --     private static Image getImage(String filename) {
 --         if (filename == null) throw new IllegalArgumentException();
@@ -891,7 +915,8 @@ pause t = undefined
 --         frame.repaint();
 showBuffer :: DrawApp ()
 showBuffer = do
-  swapBuffers
+  w <- gets window
+  liftIO $ GLFW.swapBuffers w
 
 
 privateShow :: DrawApp ()
@@ -1049,45 +1074,55 @@ getMouseY = do
 -- | Returns true if the user has typed a key (that has not yet been processed).
 hasNextKeyTyped :: DrawApp Bool
 hasNextKeyTyped = do
-  kt <- gets keysTyped
-  return (kt /= [])
+  chan <- gets keysTyped
+  e <- liftIO $ atomically $ isEmptyTChan chan
+  return $ not e
 
 -- | Returns the next key that was typed by the user (that your program has not already processed).
--- | This method should be preceded by a call to {@link #hasNextKeyTyped()} to ensure
--- | that there is a next key to process.
--- | This method returns a Unicode character corresponding to the key
--- | typed (such as {@code 'a'} or {@code 'A'}).
--- | It cannot identify action keys (such as F1 and arrow keys)
--- | or modifier keys (such as control).
-nextKeyTypedUnsafe :: DrawApp Char
-nextKeyTypedUnsafe = do
-  (x:xs) <- gets keysTyped
-  modify (\s -> s {keysTyped = xs})
-  return x
+-- | Unlike the Java version this Method waits for the next key instead of throwing an exception.
+-- | It cannot identify action keys (such as F1 and arrow keys) or modifier keys (such as control).
+nextKeyTyped :: DrawApp Char
+nextKeyTyped = do
+  chan <- gets keysTyped
+  key <- liftIO $ atomically $ readTChan chan
+  return key
 
 -- | Returns true if the given key is being pressed.
 -- | This method takes the keycode (corresponding to a physical key)
 -- |  as an argument. It can handle action keys
 -- | (such as F1 and arrow keys) and modifier keys (such as shift and control).
-isKeyPressed :: Integer -- ^ the key to check if it is being pressed
+isKeyPressed :: GLFW.Key -- ^ the key to check if it is being pressed
              -> DrawApp Bool
-isKeyPressed keycode = do
+isKeyPressed k = do
   keys <- gets keysDown
-  return $ keycode `elem` keys
 
--- | This method cannot be called directly.
-keyTyped :: Char -> DrawApp ()
-keyTyped c = do
-  modify (\s -> s {keysTyped = (keysTyped s) ++ [c]})
+  return $ k `elem` keys
 
 
 -- | This method cannot be called directly.
-keyPressed :: Integer -> DrawApp ()
+readPressedKeys :: TChan KeyEvent -> DrawApp ()
+readPressedKeys chan = do
+  k <- liftIO $ atomically $ tryReadTChan chan
+  case k of
+   Just e -> do
+    keyEvent e
+    readPressedKeys chan
+
+-- | This method cannot be called directly.
+keyEvent :: KeyEvent -> DrawApp ()
+keyEvent (KeyUp k) = keyReleased k
+keyEvent (KeyDown k) = keyPressed k
+
+-- | This method cannot be called directly.
+keyPressed :: GLFW.Key -> DrawApp ()
 keyPressed keycode = do
   modify (\s -> s {keysDown = keycode : (keysDown s)})
 
 -- | This method cannot be called directly.
-keyReleased :: Integer -> DrawApp ()
+keyReleased :: GLFW.Key -> DrawApp ()
 keyReleased keycode = do
   modify (\s -> s {keysDown = filter (/= keycode) (keysDown s)})
+
+
+
 

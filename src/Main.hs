@@ -1,8 +1,8 @@
 module Main where
 
 import StdDraw
-
-main = putStrLn "Hello, world!"
+import Data.Default
+import Control.Monad
 
 -- test = do
 --   square 0.2 0.8 0.1
@@ -24,4 +24,23 @@ main = putStrLn "Hello, world!"
 --   text 0.2 0.5 "black text"
 --   setPenColor white
 --   text 0.8 0.8 "white text"
+
+main :: IO ()
+main = withWindow "Hello, world!" conf draw
+
+conf :: DrawConfig
+conf = def
+  { defaultClearColor = green def
+  }
+
+draw :: DrawApp ()
+draw = do
+  forever $ do
+    clearDefault
+
+    let x = [ 0.1, 0.2, 0.3, 0.2 ]
+        y = [ 0.2, 0.3, 0.2, 0.1 ]
+    filledPolygon x y
+
+    showBuffer
 
