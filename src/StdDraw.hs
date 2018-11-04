@@ -44,12 +44,12 @@ data DrawConfig = DrawConfig
   { defaultPenColor   :: Color
   , defaultClearColor :: Color
   , defaultSize       :: Int
-  , defaultPenRadius  :: Double
-  , border            :: Double -- boundary of drawing canvas, 0% border
-  , defaultXMin       :: Double
-  , defaultXMax       :: Double
-  , defaultYMin       :: Double
-  , defaultYMax       :: Double
+  , defaultPenRadius  :: Float
+  , border            :: Float -- boundary of drawing canvas, 0% border
+  , defaultXMin       :: Float
+  , defaultXMax       :: Float
+  , defaultYMin       :: Float
+  , defaultYMax       :: Float
   , defaultFont       :: String -- TODO Font("SansSerif", Font.PLAIN, 16)
   }
 
@@ -72,16 +72,16 @@ data DrawState = DrawState
   { width        :: Int
   , height       :: Int
   , penColor     :: Color
-  , penRadius    :: Double
+  , penRadius    :: Float
   , defer        :: Bool -- show we draw immediately or wait until next show?
-  , xmin         :: Double
-  , ymin         :: Double
-  , xmax         :: Double
-  , ymax         :: Double
+  , xmin         :: Float
+  , ymin         :: Float
+  , xmax         :: Float
+  , ymax         :: Float
   , font         :: String
   , mousePressed :: Bool
-  , mouseX       :: Double
-  , mouseY       :: Double
+  , mouseX       :: Float
+  , mouseY       :: Float
   , keysTyped    :: TChan Char
   , keysDown     :: [GLFW.Key] -- set of key codes currently pressed down
   , keyEvents    :: TChan KeyEvent
@@ -266,8 +266,8 @@ setDefaultScale = do
   setDefaultYscale
 
 -- | Sets the 'x'-scale to the specified range.
-setXscale :: Double -- ^ The minimum value of the 'x'-scale
-          -> Double -- ^ The maximum value of the 'x'-scale
+setXscale :: Float -- ^ The minimum value of the 'x'-scale
+          -> Float -- ^ The maximum value of the 'x'-scale
           -> DrawApp ()
 setXscale min max = do
   let size = max - min
@@ -276,8 +276,8 @@ setXscale min max = do
   modify (\s -> s {xmin = min - b * size, xmax = max + b * size})
 
 -- | Sets the 'y'-scale to the specified range.
-setYscale :: Double -- ^ The minimum value of the 'y'-scale
-          -> Double -- ^ The maximum value of the 'y'-scale
+setYscale :: Float -- ^ The minimum value of the 'y'-scale
+          -> Float -- ^ The maximum value of the 'y'-scale
           -> DrawApp ()
 setYscale min max = do
   let size = max - min
@@ -286,46 +286,46 @@ setYscale min max = do
   modify (\s -> s {ymin = min - b * size, ymax = max + b * size})
 
 -- | Sets both the 'x'-scale and the 'y'-scale to the (same) specified range.
-setScale :: Double -- ^ The minimum value of the 'x'- and 'y'-scales
-          -> Double -- ^ The maximum value of the 'x'- and 'y'-scales
-          -> DrawApp ()
+setScale :: Float -- ^ The minimum value of the 'x'- and 'y'-scales
+         -> Float -- ^ The maximum value of the 'x'- and 'y'-scales
+         -> DrawApp ()
 setScale min max = do
   setXscale min max
   setYscale min max
 
 
 -- | Helper function that scales from user coordinates to screen coordinates and back
-scaleX :: Double -> DrawApp Double
+scaleX :: Float -> DrawApp Float
 scaleX x = do
   DrawState{width, xmin, xmax} <- get
   return $ (fromIntegral width) * (x - xmin) / (xmax - xmin)
 
 -- | Helper function that scales from user coordinates to screen coordinates and back
-scaleY :: Double -> DrawApp Double
+scaleY :: Float -> DrawApp Float
 scaleY y = do
   DrawState{height, ymin, ymax} <- get
   return $ (fromIntegral height) * (ymax - y) / (ymax - ymin)
 
 -- | Helper function that scales from user coordinates to screen coordinates and back
-factorX :: Double -> DrawApp Double
+factorX :: Float -> DrawApp Float
 factorX w = do
   DrawState{width, xmin, xmax} <- get
   return $ w * (fromIntegral width) / abs (xmax - xmin)
 
 -- | Helper function that scales from user coordinates to screen coordinates and back
-factorY :: Double -> DrawApp Double
+factorY :: Float -> DrawApp Float
 factorY h = do
   DrawState{height, ymin, ymax} <- get
   return $ h * (fromIntegral height) / abs (ymax - ymin)
 
 -- | Helper function that scales from user coordinates to screen coordinates and back
-userX :: Double -> DrawApp Double
+userX :: Float -> DrawApp Float
 userX x = do
   DrawState{width, xmin, xmax} <- get
   return $ xmin + x * (xmax - xmin) / (fromIntegral width)
 
 -- | Helper function that scales from user coordinates to screen coordinates and back
-userY :: Double -> DrawApp Double
+userY :: Float -> DrawApp Float
 userY y = do
   DrawState{height, ymin, ymax} <- get
   return $ ymax - y * (ymax - ymin) / (fromIntegral height)
@@ -343,7 +343,7 @@ clear (GL.Color3 r g b) = do
   liftIO $ GL.clear [GL.ColorBuffer]
 
 -- | Returns the current pen radius.
-getPenRadius :: DrawApp Double
+getPenRadius :: DrawApp Float
 getPenRadius = do
   r <- gets penRadius
   return r
@@ -367,7 +367,7 @@ setDefaultPenRadius = do
 -- |   BasicStroke stroke = new BasicStroke(scaledPenRadius, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
 -- |   // BasicStroke stroke = new BasicStroke(scaledPenRadius);
 -- |   offscreen.setStroke(stroke);
-setPenRadius :: Double -- ^ the radius of the pen
+setPenRadius :: Float -- ^ the radius of the pen
              -> DrawApp ()
 setPenRadius r = do
   when (r < 0) $ error "pen radius must be nonnegative"
@@ -389,6 +389,7 @@ setDefaultPenColor = do
 -- |   offscreen.setColor(penColor);
 setPenColor :: Color -> DrawApp ()
 setPenColor c = do
+  liftIO $ GL.color c
   modify (\s -> s {penColor = c})
 
 -- | Sets the pen color to the specified RGB color.
@@ -417,12 +418,12 @@ setFont f = do
   modify (\s -> s {font = f})
 
 -- | Draws a line segment between ('x0', 'y0') and ('x1', 'y1').
---         offscreen.draw(new Line2D.Double(scaleX(x0), scaleY(y0), scaleX(x1), scaleY(y1)));
+--         offscreen.draw(new Line2D.Float(scaleX(x0), scaleY(y0), scaleX(x1), scaleY(y1)));
 --         draw();
-line :: Double -- ^ x0 the 'x'-coordinate of one endpoint
-     -> Double -- ^ y0 the 'y'-coordinate of one endpoint
-     -> Double -- ^ x1 the 'x'-coordinate of the other endpoint
-     -> Double -- ^ y1 the 'y'-coordinate of the other endpoint
+line :: Float -- ^ x0 the 'x'-coordinate of one endpoint
+     -> Float -- ^ y0 the 'y'-coordinate of one endpoint
+     -> Float -- ^ x1 the 'x'-coordinate of the other endpoint
+     -> Float -- ^ y1 the 'y'-coordinate of the other endpoint
      -> DrawApp ()
 line = undefined
 
@@ -430,30 +431,20 @@ line = undefined
 -- | This method is private because pixels depend on the display.
 -- | To achieve the same effect, set the pen radius to 0 and call 'point'.
 --         offscreen.fillRect((int) Math.round(scaleX(x)), (int) Math.round(scaleY(y)), 1, 1);
-pixel :: Double -- ^ the 'x'-coordinate of the pixel
-      -> Double -- ^ the 'y'-coordinate of the pixel
+pixel :: Float -- ^ the 'x'-coordinate of the pixel
+      -> Float -- ^ the 'y'-coordinate of the pixel
       -> DrawApp()
 pixel x y = undefined
 
 -- | Draws a point centered at (<em>x</em>, <em>y</em>).
 -- | The point is a filled circle whose radius is equal to the pen radius.
 -- | To draw a single-pixel point, first set the pen radius to 0.
---         double xs = scaleX(x);
---         double ys = scaleY(y);
---         double r = penRadius;
---         float scaledPenRadius = (float) (r * DEFAULT_SIZE);
---
---         // double ws = factorX(2*r);
---         // double hs = factorY(2*r);
---         // if (ws <= 1 && hs <= 1) pixel(x, y);
---         if (scaledPenRadius <= 1) pixel(x, y);
---         else offscreen.fill(new Ellipse2D.Double(xs - scaledPenRadius/2, ys - scaledPenRadius/2,
---                                                  scaledPenRadius, scaledPenRadius));
---         draw();
-point :: Double -- ^the 'x'-coordinate of the point
-      -> Double -- ^the 'y'-coordinate of the point
+point :: Float -- ^the 'x'-coordinate of the point
+      -> Float -- ^the 'y'-coordinate of the point
       -> DrawApp()
-point x y = undefined
+point x y = do
+  r <- gets penRadius
+  filledCircle x y r
 
 -- | Draws a circle of the specified radius, centered at ('x', 'y').
 circle :: Float -- ^ the 'x'-coordinate of the center of the circle
@@ -491,7 +482,7 @@ filledCircle x y r =
 --         double ws = factorX(2*semiMajorAxis);
 --         double hs = factorY(2*semiMinorAxis);
 --         if (ws <= 1 && hs <= 1) pixel(x, y);
---         else offscreen.draw(new Ellipse2D.Double(xs - ws/2, ys - hs/2, ws, hs));
+--         else offscreen.draw(new Ellipse2D.Float(xs - ws/2, ys - hs/2, ws, hs));
 --         draw();
 --     }
 --     /**
@@ -513,7 +504,7 @@ filledCircle x y r =
 --         double ws = factorX(2*semiMajorAxis);
 --         double hs = factorY(2*semiMinorAxis);
 --         if (ws <= 1 && hs <= 1) pixel(x, y);
---         else offscreen.fill(new Ellipse2D.Double(xs - ws/2, ys - hs/2, ws, hs));
+--         else offscreen.fill(new Ellipse2D.Float(xs - ws/2, ys - hs/2, ws, hs));
 --         draw();
 --     }
 --     /**
@@ -536,7 +527,7 @@ filledCircle x y r =
 --         double ws = factorX(2*radius);
 --         double hs = factorY(2*radius);
 --         if (ws <= 1 && hs <= 1) pixel(x, y);
---         else offscreen.draw(new Arc2D.Double(xs - ws/2, ys - hs/2, ws, hs, angle1, angle2 - angle1, Arc2D.OPEN));
+--         else offscreen.draw(new Arc2D.Float(xs - ws/2, ys - hs/2, ws, hs, angle1, angle2 - angle1, Arc2D.OPEN));
 --         draw();
 --     }
 
@@ -592,6 +583,7 @@ filledPolygon :: [Float] -- ^ x an array of all the 'x'-coordinates of the polyg
               -> [Float] -- ^ y an array of all the 'y'-coordinates of the polygon
               -> DrawApp ()
 filledPolygon xs ys = do
+
   liftIO $ GL.renderPrimitive GL.Polygon $ mapM_ GL.vertex $ verticesUnsafe xs ys
 
 --     // get an image from the given filename
@@ -843,16 +835,16 @@ privateShow = do
 -- | drawing methods such as {@code line()}, {@code circle()},
 -- | and {@code square()} will be deffered until the next call
 -- | to show(). Useful for animations.
-enableDoubleBuffering :: DrawApp ()
-enableDoubleBuffering = do
+enableFloatBuffering :: DrawApp ()
+enableFloatBuffering = do
   modify (\s -> s { defer = True })
 
 -- | Disable double buffering. All subsequent calls to
 -- | drawing methods such as {@code line()}, {@code circle()},
 -- | and {@code square()} will be displayed on screen when called.
 -- | This is the default.
-disableDoubleBuffering :: DrawApp ()
-disableDoubleBuffering = do
+disableFloatBuffering :: DrawApp ()
+disableFloatBuffering = do
   modify (\s -> s { defer = False })
 
 -- | Saves the drawing to using the specified filename.
@@ -924,13 +916,13 @@ isMousePressed = do
 
 
 -- | Returns the 'x'-coordinate of the mouse.
-getMouseX :: DrawApp Double
+getMouseX :: DrawApp Float
 getMouseX = do
   x <- gets mouseX
   return x
 
 -- | Returns the 'y'-coordinate of the mouse.
-getMouseY :: DrawApp Double
+getMouseY :: DrawApp Float
 getMouseY = do
   y <- gets mouseY
   return y
