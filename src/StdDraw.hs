@@ -418,14 +418,15 @@ setFont f = do
   modify (\s -> s {font = f})
 
 -- | Draws a line segment between ('x0', 'y0') and ('x1', 'y1').
---         offscreen.draw(new Line2D.Float(scaleX(x0), scaleY(y0), scaleX(x1), scaleY(y1)));
---         draw();
 line :: Float -- ^ x0 the 'x'-coordinate of one endpoint
      -> Float -- ^ y0 the 'y'-coordinate of one endpoint
      -> Float -- ^ x1 the 'x'-coordinate of the other endpoint
      -> Float -- ^ y1 the 'y'-coordinate of the other endpoint
      -> DrawApp ()
-line = undefined
+line x0 y0 x1 y1 = do
+  liftIO $ GL.renderPrimitive GL.Lines $ do
+    GL.vertex $ vertex3 (x0, y0)
+    GL.vertex $ vertex3 (x1, y1)
 
 -- | Draws one pixel at ('x', 'y').
 -- | This method is private because pixels depend on the display.
