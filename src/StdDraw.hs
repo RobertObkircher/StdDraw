@@ -31,10 +31,10 @@ verticesUnsafe xs ys
 vertex3 :: (Float, Float) -> GL.Vertex3 GL.GLfloat
 vertex3 (x, y) = GL.Vertex3 x y 0
 
-circleVertices x y radius = fmap circleVertex [0..299]
+ellipseVertices x y w h = fmap circleVertex [0..299]
   where
     circleVertex i = let angle = 2 * pi * i / 300
-                      in (x + radius * (cos angle), y + radius * (sin angle))
+                      in (x + w * (cos angle), y + h * (sin angle))
 
 type Color = GL.Color3 GL.GLubyte
 
@@ -450,64 +450,38 @@ point x y = do
 circle :: Float -- ^ the 'x'-coordinate of the center of the circle
        -> Float -- ^ the 'y'-coordinate of the center of the circle
        -> Float -- ^ radius the radius of the circle
-       -> DrawApp()
-circle x y r =
-  let (xs, ys) = unzip (circleVertices x y r)
-   in polygon xs ys
+       -> DrawApp ()
+circle x y r = ellipse x y r r
 
 -- | Draws a filled circle of the specified radius, centered at ('x', 'y').
 filledCircle :: Float -- ^ the 'x'-coordinate of the center of the circle
              -> Float -- ^ the 'y'-coordinate of the center of the circle
              -> Float -- ^ radius the radius of the circle
-             -> DrawApp()
-filledCircle x y r =
-  let (xs, ys) = unzip (circleVertices x y r)
+             -> DrawApp ()
+filledCircle x y r = filledEllipse x y r r
+
+-- | Draws an ellipse with the specified semimajor and semiminor axes,
+-- | centered at ('x', 'y').
+ellipse :: Float -- ^ the 'x'-coordinate of the center of the ellipse
+        -> Float -- ^ the 'y'-coordinate of the center of the ellipse
+        -> Float -- ^ semiMajorAxis is the semimajor axis of the ellipse
+        -> Float -- ^ semiMinorAxis is the semiminor axis of the ellipse
+        -> DrawApp ()
+ellipse x y semiMajorAxis semiMinorAxis =
+  let (xs, ys) = unzip (ellipseVertices x y semiMajorAxis semiMinorAxis)
+   in polygon xs ys
+
+-- | Draws an ellipse with the specified semimajor and semiminor axes,
+-- | centered at ('x', 'y').
+filledEllipse :: Float -- ^ the 'x'-coordinate of the center of the ellipse
+        -> Float -- ^ the 'y'-coordinate of the center of the ellipse
+        -> Float -- ^ semiMajorAxis is the semimajor axis of the ellipse
+        -> Float -- ^ semiMinorAxis is the semiminor axis of the ellipse
+        -> DrawApp ()
+filledEllipse x y semiMajorAxis semiMinorAxis =
+  let (xs, ys) = unzip (ellipseVertices x y semiMajorAxis semiMinorAxis)
    in filledPolygon xs ys
 
---      * Draws an ellipse with the specified semimajor and semiminor axes,
---      * centered at (<em>x</em>, <em>y</em>).
---      *
---      * @param  x the <em>x</em>-coordinate of the center of the ellipse
---      * @param  y the <em>y</em>-coordinate of the center of the ellipse
---      * @param  semiMajorAxis is the semimajor axis of the ellipse
---      * @param  semiMinorAxis is the semiminor axis of the ellipse
---      * @throws IllegalArgumentException if either {@code semiMajorAxis}
---      *         or {@code semiMinorAxis} is negative
---      */
---     public static void ellipse(double x, double y, double semiMajorAxis, double semiMinorAxis) {
---         if (!(semiMajorAxis >= 0)) throw new IllegalArgumentException("ellipse semimajor axis must be nonnegative");
---         if (!(semiMinorAxis >= 0)) throw new IllegalArgumentException("ellipse semiminor axis must be nonnegative");
---         double xs = scaleX(x);
---         double ys = scaleY(y);
---         double ws = factorX(2*semiMajorAxis);
---         double hs = factorY(2*semiMinorAxis);
---         if (ws <= 1 && hs <= 1) pixel(x, y);
---         else offscreen.draw(new Ellipse2D.Float(xs - ws/2, ys - hs/2, ws, hs));
---         draw();
---     }
---     /**
---      * Draws an ellipse with the specified semimajor and semiminor axes,
---      * centered at (<em>x</em>, <em>y</em>).
---      *
---      * @param  x the <em>x</em>-coordinate of the center of the ellipse
---      * @param  y the <em>y</em>-coordinate of the center of the ellipse
---      * @param  semiMajorAxis is the semimajor axis of the ellipse
---      * @param  semiMinorAxis is the semiminor axis of the ellipse
---      * @throws IllegalArgumentException if either {@code semiMajorAxis}
---      *         or {@code semiMinorAxis} is negative
---      */
---     public static void filledEllipse(double x, double y, double semiMajorAxis, double semiMinorAxis) {
---         if (!(semiMajorAxis >= 0)) throw new IllegalArgumentException("ellipse semimajor axis must be nonnegative");
---         if (!(semiMinorAxis >= 0)) throw new IllegalArgumentException("ellipse semiminor axis must be nonnegative");
---         double xs = scaleX(x);
---         double ys = scaleY(y);
---         double ws = factorX(2*semiMajorAxis);
---         double hs = factorY(2*semiMinorAxis);
---         if (ws <= 1 && hs <= 1) pixel(x, y);
---         else offscreen.fill(new Ellipse2D.Float(xs - ws/2, ys - hs/2, ws, hs));
---         draw();
---     }
---     /**
 --      * Draws a circular arc of the specified radius,
 --      * centered at (<em>x</em>, <em>y</em>), from angle1 to angle2 (in degrees).
 --      *
