@@ -482,18 +482,14 @@ filledEllipse x y semiMajorAxis semiMinorAxis =
   let (xs, ys) = unzip (ellipseVertices x y semiMajorAxis semiMinorAxis)
    in filledPolygon xs ys
 
---      * Draws a circular arc of the specified radius,
---      * centered at (<em>x</em>, <em>y</em>), from angle1 to angle2 (in degrees).
---      *
---      * @param  x the <em>x</em>-coordinate of the center of the circle
---      * @param  y the <em>y</em>-coordinate of the center of the circle
---      * @param  radius the radius of the circle
---      * @param  angle1 the starting angle. 0 would mean an arc beginning at 3 o'clock.
---      * @param  angle2 the angle at the end of the arc. For example, if
---      *         you want a 90 degree arc, then angle2 should be angle1 + 90.
---      * @throws IllegalArgumentException if {@code radius} is negative
---      */
---     public static void arc(double x, double y, double radius, double angle1, double angle2) {
+-- | Draws a circular arc of the specified radius,
+-- | centered at ('x', 'y'), from angle1 to angle2 (in degrees).
+arc :: Float -- ^ the 'x'-coordinate of the center of the circle
+    -> Float -- ^ the 'y'-coordinate of the center of the circle
+    -> Float -- ^ radius the radius of the circle
+    -> Float -- ^ angle1 the starting angle. 0 would mean an arc beginning at 3 o'clock.
+    -> Float -- ^ angle2 the angle at the end of the arc. For example, if you want a 90 degree arc, then angle2 should be angle1 + 90.
+    -> DrawApp ()
 --         if (radius < 0) throw new IllegalArgumentException("arc radius must be nonnegative");
 --         while (angle2 < angle1) angle2 += 360;
 --         double xs = scaleX(x);
@@ -503,7 +499,7 @@ filledEllipse x y semiMajorAxis semiMinorAxis =
 --         if (ws <= 1 && hs <= 1) pixel(x, y);
 --         else offscreen.draw(new Arc2D.Float(xs - ws/2, ys - hs/2, ws, hs, angle1, angle2 - angle1, Arc2D.OPEN));
 --         draw();
---     }
+arc = undefined
 
 -- | Draws a square of side length 2r, centered at ('x', 'y').
 square :: Float -- ^ the 'x'-coordinate of the center of the square
