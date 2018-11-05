@@ -291,43 +291,6 @@ setScale min max = do
   setXscale min max
   setYscale min max
 
-
--- | Helper function that scales from user coordinates to screen coordinates and back
-scaleX :: Float -> DrawApp Float
-scaleX x = do
-  DrawState{width, xmin, xmax} <- get
-  return $ (fromIntegral width) * (x - xmin) / (xmax - xmin)
-
--- | Helper function that scales from user coordinates to screen coordinates and back
-scaleY :: Float -> DrawApp Float
-scaleY y = do
-  DrawState{height, ymin, ymax} <- get
-  return $ (fromIntegral height) * (ymax - y) / (ymax - ymin)
-
--- | Helper function that scales from user coordinates to screen coordinates and back
-factorX :: Float -> DrawApp Float
-factorX w = do
-  DrawState{width, xmin, xmax} <- get
-  return $ w * (fromIntegral width) / abs (xmax - xmin)
-
--- | Helper function that scales from user coordinates to screen coordinates and back
-factorY :: Float -> DrawApp Float
-factorY h = do
-  DrawState{height, ymin, ymax} <- get
-  return $ h * (fromIntegral height) / abs (ymax - ymin)
-
--- | Helper function that scales from user coordinates to screen coordinates and back
-userX :: Float -> DrawApp Float
-userX x = do
-  DrawState{width, xmin, xmax} <- get
-  return $ xmin + x * (xmax - xmin) / (fromIntegral width)
-
--- | Helper function that scales from user coordinates to screen coordinates and back
-userY :: Float -> DrawApp Float
-userY y = do
-  DrawState{height, ymin, ymax} <- get
-  return $ ymax - y * (ymax - ymin) / (fromIntegral height)
-
 -- | Clears the screen to the default color (white).
 clearDefault :: DrawApp ()
 clearDefault = do
