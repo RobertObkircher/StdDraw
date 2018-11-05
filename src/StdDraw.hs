@@ -8,13 +8,13 @@ import           Control.Concurrent        (forkIO, threadDelay)
 import           Control.Concurrent.STM    (TChan, atomically, isEmptyTChan,
                                             newTChanIO, readTChan, tryReadTChan,
                                             writeTChan)
-import           Data.Default
 import           Control.Exception         (finally)
 import           Control.Monad.IO.Class    (MonadIO, liftIO)
 import           Control.Monad.Reader      (MonadReader, ReaderT, asks,
                                             runReaderT, when)
 import           Control.Monad.State       (MonadState, StateT, get, gets,
                                             modify, put, runStateT)
+import           Data.Default
 import           Graphics.Rendering.OpenGL (($=))
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.UI.GLFW          as GLFW
@@ -169,18 +169,14 @@ setDefaultCanvasSize = do
   d <- asks defaultSize
   setCanvasSize d d
 
--- | Sets the canvas (drawing area) to be <em>width</em>-by-<em>height</em> pixels.
+-- | Sets the canvas (drawing area) to be 'width'-by-'height' pixels.
 -- | This also erases the current drawing and resets the coordinate system,
 -- | pen radius, pen color, and font back to their default values.
 -- | Ordinarly, this method is called once, at the very beginning
 -- | of a program.
--- |
--- | @param  canvasWidth the width as a number of pixels
--- | @param  canvasHeight the height as a number of pixels
--- | @throws IllegalArgumentException unless both {@code canvasWidth} and
--- |         {@code canvasHeight} are positive
--- |
-setCanvasSize :: Int -> Int -> DrawApp ()
+setCanvasSize :: Int -- ^ canvasWidth the width as a number of pixels
+              -> Int -- ^ canvasHeight the height as a number of pixels
+              -> DrawApp ()
 setCanvasSize w h = do
   when (w <= 0 || h <= 0) $ error "width and height must be positive"
   modify (\s -> s {width = w, height = h})
@@ -225,6 +221,7 @@ setCanvasSize w h = do
 -- frame.pack();
 -- frame.requestFocusInWindow();
 -- frame.setVisible(true);
+
 initState :: DrawApp ()
 initState = do
   makeNewState <- asks makeState
@@ -242,6 +239,7 @@ initState = do
 --                         Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
 -- menu.add(menuItem1);
 -- return menuBar;
+
 createMenuBar :: DrawApp ()
 createMenuBar = undefined
 
@@ -252,7 +250,7 @@ setDefaultXscale = do
   xmax <- asks defaultXMax
   setXscale xmin xmax
 
--- | Sets the <em>y</em>-scale to be the default (between 0.0 and 1.0).
+-- | Sets the 'y'-scale to be the default (between 0.0 and 1.0).
 setDefaultYscale :: DrawApp ()
 setDefaultYscale = do
   ymin <- asks defaultYMin
@@ -386,7 +384,6 @@ setDefaultPenColor = do
   setPenColor c
 
 -- | Sets the pen color to the specified color.
--- |   offscreen.setColor(penColor);
 setPenColor :: Color -> DrawApp ()
 setPenColor c = do
   liftIO $ GL.color c
@@ -394,9 +391,9 @@ setPenColor c = do
 
 -- | Sets the pen color to the specified RGB color.
 setRGBPenColor :: GL.GLubyte -- ^ the amount of red (between 0 and 255)
-            -> GL.GLubyte -- ^ the amount of green (between 0 and 255)
-            -> GL.GLubyte -- ^ the amount of blue (between 0 and 255)
-            -> DrawApp ()
+               -> GL.GLubyte -- ^ the amount of green (between 0 and 255)
+               -> GL.GLubyte -- ^ the amount of blue (between 0 and 255)
+               -> DrawApp ()
 setRGBPenColor r g b = do
   setPenColor $ GL.Color3 r g b
 
@@ -437,7 +434,7 @@ pixel :: Float -- ^ the 'x'-coordinate of the pixel
       -> DrawApp()
 pixel x y = undefined
 
--- | Draws a point centered at (<em>x</em>, <em>y</em>).
+-- | Draws a point centered at ('x', 'y').
 -- | The point is a filled circle whose radius is equal to the pen radius.
 -- | To draw a single-pixel point, first set the pen radius to 0.
 point :: Float -- ^the 'x'-coordinate of the point
@@ -516,7 +513,7 @@ filledSquare :: Float -- ^ the 'x'-coordinate of the center of the square
              -> DrawApp ()
 filledSquare x y halfLength = filledRectangle x y halfLength halfLength
 
--- | Draws a rectangle of the specified size, centered at (<em>x</em>, <em>y</em>).
+-- | Draws a rectangle of the specified size, centered at ('x', 'y').
 rectangle :: Float -- ^ the 'x'-coordinate of the center of the rectangle
           -> Float -- ^ the 'y'-coordinate of the center of the rectangle
           -> Float -- ^ halfWidth one half the width of the rectangle
@@ -554,7 +551,6 @@ filledPolygon :: [Float] -- ^ x an array of all the 'x'-coordinates of the polyg
               -> [Float] -- ^ y an array of all the 'y'-coordinates of the polygon
               -> DrawApp ()
 filledPolygon xs ys = do
-
   liftIO $ GL.renderPrimitive GL.Polygon $ mapM_ GL.vertex $ verticesUnsafe xs ys
 
 --     // get an image from the given filename
@@ -592,15 +588,15 @@ filledPolygon xs ys = do
 --         return icon.getImage();
 --     }
 --     /**
---      * Draws the specified image centered at (<em>x</em>, <em>y</em>).
+--      * Draws the specified image centered at ('x', 'y').
 --      * The supported image formats are JPEG, PNG, and GIF.
 --      * As an optimization, the picture is cached, so there is no performance
 --      * penalty for redrawing the same image multiple times (e.g., in an animation).
 --      * However, if you change the picture file after drawing it, subsequent
 --      * calls will draw the original picture.
 --      *
---      * @param  x the center <em>x</em>-coordinate of the image
---      * @param  y the center <em>y</em>-coordinate of the image
+--      * @param  x the center 'x'-coordinate of the image
+--      * @param  y the center 'y'-coordinate of the image
 --      * @param  filename the name of the image/picture, e.g., "ball.gif"
 --      * @throws IllegalArgumentException if the image filename is invalid
 --      */
@@ -619,12 +615,12 @@ filledPolygon xs ys = do
 --         draw();
 --     }
 --     /**
---      * Draws the specified image centered at (<em>x</em>, <em>y</em>),
+--      * Draws the specified image centered at ('x', 'y'),
 --      * rotated given number of degrees.
 --      * The supported image formats are JPEG, PNG, and GIF.
 --      *
---      * @param  x the center <em>x</em>-coordinate of the image
---      * @param  y the center <em>y</em>-coordinate of the image
+--      * @param  x the center 'x'-coordinate of the image
+--      * @param  y the center 'y'-coordinate of the image
 --      * @param  filename the name of the image/picture, e.g., "ball.gif"
 --      * @param  degrees is the number of degrees to rotate counterclockwise
 --      * @throws IllegalArgumentException if the image filename is invalid
@@ -645,12 +641,12 @@ filledPolygon xs ys = do
 --         draw();
 --     }
 --     /**
---      * Draws the specified image centered at (<em>x</em>, <em>y</em>),
+--      * Draws the specified image centered at ('x', 'y'),
 --      * rescaled to the specified bounding box.
 --      * The supported image formats are JPEG, PNG, and GIF.
 --      *
---      * @param  x the center <em>x</em>-coordinate of the image
---      * @param  y the center <em>y</em>-coordinate of the image
+--      * @param  x the center 'x'-coordinate of the image
+--      * @param  y the center 'y'-coordinate of the image
 --      * @param  filename the name of the image/picture, e.g., "ball.gif"
 --      * @param  scaledWidth the width of the scaled image (in screen coordinates)
 --      * @param  scaledHeight the height of the scaled image (in screen coordinates)
@@ -677,12 +673,12 @@ filledPolygon xs ys = do
 --         draw();
 --     }
 --     /**
---      * Draws the specified image centered at (<em>x</em>, <em>y</em>), rotated
+--      * Draws the specified image centered at ('x', 'y'), rotated
 --      * given number of degrees, and rescaled to the specified bounding box.
 --      * The supported image formats are JPEG, PNG, and GIF.
 --      *
---      * @param  x the center <em>x</em>-coordinate of the image
---      * @param  y the center <em>y</em>-coordinate of the image
+--      * @param  x the center 'x'-coordinate of the image
+--      * @param  y the center 'y'-coordinate of the image
 --      * @param  filename the name of the image/picture, e.g., "ball.gif"
 --      * @param  scaledWidth the width of the scaled image (in screen coordinates)
 --      * @param  scaledHeight the height of the scaled image (in screen coordinates)
@@ -712,10 +708,10 @@ filledPolygon xs ys = do
 --         draw();
 --     }
 --     /**
---      * Write the given text string in the current font, centered at (<em>x</em>, <em>y</em>).
+--      * Write the given text string in the current font, centered at ('x', 'y').
 --      *
---      * @param  x the center <em>x</em>-coordinate of the text
---      * @param  y the center <em>y</em>-coordinate of the text
+--      * @param  x the center 'x'-coordinate of the text
+--      * @param  y the center 'y'-coordinate of the text
 --      * @param  text the text to write
 --      */
 --     public static void text(double x, double y, String text) {
@@ -730,10 +726,10 @@ filledPolygon xs ys = do
 --         draw();
 --     }
 --     /**
---      * Write the given text string in the current font, centered at (<em>x</em>, <em>y</em>) and
+--      * Write the given text string in the current font, centered at ('x', 'y') and
 --      * rotated by the specified number of degrees.
---      * @param  x the center <em>x</em>-coordinate of the text
---      * @param  y the center <em>y</em>-coordinate of the text
+--      * @param  x the center 'x'-coordinate of the text
+--      * @param  y the center 'y'-coordinate of the text
 --      * @param  text the text to write
 --      * @param  degrees is the number of degrees to rotate counterclockwise
 --      */
@@ -746,9 +742,9 @@ filledPolygon xs ys = do
 --         offscreen.rotate(Math.toRadians(+degrees), xs, ys);
 --     }
 --     /**
---      * Write the given text string in the current font, left-aligned at (<em>x</em>, <em>y</em>).
---      * @param  x the <em>x</em>-coordinate of the text
---      * @param  y the <em>y</em>-coordinate of the text
+--      * Write the given text string in the current font, left-aligned at ('x', 'y').
+--      * @param  x the 'x'-coordinate of the text
+--      * @param  y the 'y'-coordinate of the text
 --      * @param  text the text
 --      */
 --     public static void textLeft(double x, double y, String text) {
@@ -762,10 +758,10 @@ filledPolygon xs ys = do
 --         draw();
 --     }
 --     /**
---      * Write the given text string in the current font, right-aligned at (<em>x</em>, <em>y</em>).
+--      * Write the given text string in the current font, right-aligned at ('x', 'y').
 --      *
---      * @param  x the <em>x</em>-coordinate of the text
---      * @param  y the <em>y</em>-coordinate of the text
+--      * @param  x the 'x'-coordinate of the text
+--      * @param  y the 'y'-coordinate of the text
 --      * @param  text the text to write
 --      */
 --     public static void textRight(double x, double y, String text) {
@@ -789,8 +785,6 @@ pause t = do
 
 -- | Copies offscreen buffer to onscreen buffer. There is no reason to call
 -- | this method unless double buffering is enabled.
---         onscreen.drawImage(offscreenImage, 0, 0, null);
---         frame.repaint();
 showBuffer :: DrawApp ()
 showBuffer = do
   w <- gets window
