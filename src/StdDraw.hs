@@ -306,6 +306,7 @@ clear (GL.Color3 r g b) = do
 -- | Returns the current pen radius.
 getPenRadius :: DrawApp Float
 getPenRadius = do
+--   r <- GL.get GL.lineWidth TODO scale this value back?
   r <- gets penRadius
   return r
 
@@ -322,16 +323,12 @@ setDefaultPenRadius = do
 -- | The pen is circular, so that lines have rounded ends, and when you set the
 -- | pen radius and draw a point, you get a circle of the specified radius.
 -- | The pen radius is not affected by coordinate scaling.
--- |   if (!(radius >= 0)) throw new IllegalArgumentException("pen radius must be nonnegative");
--- |   penRadius = radius;
--- |   float scaledPenRadius = (float) (radius * DEFAULT_SIZE);
--- |   BasicStroke stroke = new BasicStroke(scaledPenRadius, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
--- |   // BasicStroke stroke = new BasicStroke(scaledPenRadius);
--- |   offscreen.setStroke(stroke);
 setPenRadius :: Float -- ^ the radius of the pen
              -> DrawApp ()
 setPenRadius r = do
   when (r < 0) $ error "pen radius must be nonnegative"
+  d <- asks defaultPenRadius -- TODO scale by screen size
+  GL.lineWidth $= (r / d)
   modify (\s -> s {penRadius = r})
 
 -- | Returns the current pen color.
