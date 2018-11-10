@@ -447,7 +447,6 @@ arc x y r angle1 angle2 = do
       d  = mod2pi $ a2 - a1
       n  = round $ 300 * d / (2 * pi)
       v  = fmap circleVertex $ fmap (\x -> a1 + d / (fromIntegral n) * fromIntegral x) [0..(n - 1)]
-  liftIO $ print (a1, a2, d, n)
   lineStrip v
   where
     circleVertex angle = (x + r * (cos angle), y + r * (sin angle))
