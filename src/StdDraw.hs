@@ -15,27 +15,12 @@ import           Control.Monad.Reader      (MonadReader, ReaderT, asks,
 import           Control.Monad.State       (MonadState, StateT, get, gets,
                                             modify, put, runStateT)
 import           Data.Default
-import           Data.Fixed                (mod')
 import           Graphics.Rendering.OpenGL (($=))
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.UI.GLFW          as GLFW
 
 import           StdDraw.Colors
-
--- | TODO Move to util?
-verticesUnsafe :: [Float] -> [Float] -> [GL.Vertex3 GL.GLfloat]
-verticesUnsafe xs ys
-  | length xs == length ys = fmap vertex3 $ zip xs ys
-  | otherwise = error "Lists must have the same length"
-
--- | TODO Move to util?
-vertex3 :: (Float, Float) -> GL.Vertex3 GL.GLfloat
-vertex3 (x, y) = GL.Vertex3 x y 0
-
-ellipseVertices x y w h = fmap circleVertex [0..299]
-  where
-    circleVertex i = let angle = 2 * pi * i / 300
-                      in (x + w * (cos angle), y + h * (sin angle))
+import           StdDraw.Util
 
 type Color = GL.Color3 GL.GLubyte
 
@@ -457,16 +442,14 @@ arc :: Float -- ^ the 'x'-coordinate of the center of the circle
     -> Float -- ^ angle2 the angle at the end of the arc. For example, if you want a 90 degree arc, then angle2 should be angle1 + 90.
     -> DrawApp ()
 arc x y r angle1 angle2 = do
-  let a1 = normalize $ degToRad angle1
-      a2 = normalize $ degToRad angle2
-      d  = normalize $ a2 - a1
+  let a1 = mod2pi $ degToRad angle1
+      a2 = mod2pi $ degToRad angle2
+      d  = mod2pi $ a2 - a1
       n  = round $ 300 * d / (2 * pi)
       v  = fmap circleVertex $ fmap (\x -> a1 + d / (fromIntegral n) * fromIntegral x) [0..(n - 1)]
   liftIO $ print (a1, a2, d, n)
   lineStrip v
   where
-    normalize = flip mod' (pi * 2)
-    degToRad = (pi / 180 *)
     circleVertex angle = (x + r * (cos angle), y + r * (sin angle))
 
 -- | Draws a square of side length 2r, centered at ('x', 'y').
