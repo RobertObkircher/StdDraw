@@ -15,6 +15,7 @@ import           Control.Monad.Reader      (MonadReader, ReaderT, asks,
 import           Control.Monad.State       (MonadState, StateT, get, gets,
                                             modify, put, runStateT)
 import           Data.Default
+import           Data.Fixed                (mod')
 import           Graphics.Rendering.OpenGL (($=))
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.UI.GLFW          as GLFW
@@ -385,6 +386,13 @@ line x0 y0 x1 y1 = do
     GL.vertex $ vertex3 (x0, y0)
     GL.vertex $ vertex3 (x1, y1)
 
+-- | Draws a connected line
+lineStrip :: [(Float, Float)] -- Each pair represents an ('x', 'y') coordinate
+          -> DrawApp ()
+lineStrip xys = do
+  let v3s = fmap vertex3 xys
+  liftIO $ GL.renderPrimitive GL.LineStrip $ mapM_ GL.vertex v3s
+
 -- | Draws one pixel at ('x', 'y').
 -- | This method is private because pixels depend on the display.
 -- | To achieve the same effect, set the pen radius to 0 and call 'point'.
@@ -457,7 +465,18 @@ arc :: Float -- ^ the 'x'-coordinate of the center of the circle
 --         if (ws <= 1 && hs <= 1) pixel(x, y);
 --         else offscreen.draw(new Arc2D.Float(xs - ws/2, ys - hs/2, ws, hs, angle1, angle2 - angle1, Arc2D.OPEN));
 --         draw();
-arc = undefined
+arc x y r angle1 angle2 = do
+  let a1 = normalize $ degToRad angle1
+      a2 = normalize $ degToRad angle2
+      d  = normalize $ a2 - a1
+      n  = round $ 300 * d / (2 * pi)
+      v  = fmap circleVertex $ fmap (\x -> a1 + d / (fromIntegral n) * fromIntegral x) [0..(n - 1)]
+  liftIO $ print (a1, a2, d, n)
+  lineStrip v
+  where
+    normalize = flip mod' (pi * 2)
+    degToRad = (pi / 180 *)
+    circleVertex angle = (x + r * (cos angle), y + r * (sin angle))
 
 -- | Draws a square of side length 2r, centered at ('x', 'y').
 square :: Float -- ^ the 'x'-coordinate of the center of the square

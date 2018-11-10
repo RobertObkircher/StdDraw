@@ -34,7 +34,7 @@ test = do
 
   setPenColor bookRed
   setPenRadius 0.02
---   arc 0.8 0.2 0.1 200 45
+  arc 0.8 0.2 0.1 200 45
 
   setDefaultPenRadius
   setPenColor bookBlue
