@@ -456,15 +456,6 @@ arc :: Float -- ^ the 'x'-coordinate of the center of the circle
     -> Float -- ^ angle1 the starting angle. 0 would mean an arc beginning at 3 o'clock.
     -> Float -- ^ angle2 the angle at the end of the arc. For example, if you want a 90 degree arc, then angle2 should be angle1 + 90.
     -> DrawApp ()
---         if (radius < 0) throw new IllegalArgumentException("arc radius must be nonnegative");
---         while (angle2 < angle1) angle2 += 360;
---         double xs = scaleX(x);
---         double ys = scaleY(y);
---         double ws = factorX(2*radius);
---         double hs = factorY(2*radius);
---         if (ws <= 1 && hs <= 1) pixel(x, y);
---         else offscreen.draw(new Arc2D.Float(xs - ws/2, ys - hs/2, ws, hs, angle1, angle2 - angle1, Arc2D.OPEN));
---         draw();
 arc x y r angle1 angle2 = do
   let a1 = normalize $ degToRad angle1
       a2 = normalize $ degToRad angle2
