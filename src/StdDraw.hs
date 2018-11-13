@@ -168,45 +168,19 @@ setCanvasSize w h = do
   modify (\s -> s {width = w, height = h})
   initState
 
--- TODO
--- if (frame != null) frame.setVisible(false);
--- frame = new JFrame();
--- offscreenImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
--- onscreenImage  = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
--- offscreen = offscreenImage.createGraphics();
--- onscreen  = onscreenImage.createGraphics();
--- setXscale();
--- setYscale();
--- offscreen.setColor(DEFAULT_CLEAR_COLOR);
--- offscreen.fillRect(0, 0, width, height);
--- setPenColor();
--- setPenRadius();
--- setFont();
--- clear();
---
+  setDefaultScale
+
+  setDefaultPenColor
+  setDefaultPenRadius
+  setDefaultFont
+
+  clearDefault
 -- // add antialiasing
 -- RenderingHints hints = new RenderingHints(RenderingHints.KEY_ANTIALIASING,
 --                                           RenderingHints.VALUE_ANTIALIAS_ON);
 -- hints.put(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 -- offscreen.addRenderingHints(hints);
---
--- // frame stuff
--- ImageIcon icon = new ImageIcon(onscreenImage);
--- JLabel draw = new JLabel(icon);
---
--- draw.addMouseListener(std);
--- draw.addMouseMotionListener(std);
---
--- frame.setContentPane(draw);
--- frame.addKeyListener(std);    // JLabel cannot get keyboard focus
 -- frame.setResizable(false);
--- frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);            // closes all windows
--- // frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);      // closes only current window
--- frame.setTitle("Standard Draw");
--- frame.setJMenuBar(createMenuBar());
--- frame.pack();
--- frame.requestFocusInWindow();
--- frame.setVisible(true);
 
 initState :: DrawApp ()
 initState = do
