@@ -12,12 +12,11 @@ main = withWindow "Hello, world!" conf draw
 
 conf :: DrawConfig
 conf = def
-  { defaultClearColor = green
-  }
 
 draw :: DrawApp ()
 draw = do
   liftIO $ hSetBuffering stdout LineBuffering
+  setDefaultCanvasSize
   forever $ do
     clearDefault
     setDefaultPenColor

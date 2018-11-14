@@ -232,6 +232,7 @@ setXscale min max = do
   when (size == 0) $ error "the min and max are the same"
   b <- asks border
   modify (\s -> s {xmin = min - b * size, xmax = max + b * size})
+  updateScale
 
 -- | Sets the 'y'-scale to the specified range.
 setYscale :: Float -- ^ The minimum value of the 'y'-scale
@@ -242,6 +243,7 @@ setYscale min max = do
   when (size == 0) $ error "the min and max are the same"
   b <- asks border
   modify (\s -> s {ymin = min - b * size, ymax = max + b * size})
+  updateScale
 
 -- | Sets both the 'x'-scale and the 'y'-scale to the (same) specified range.
 setScale :: Float -- ^ The minimum value of the 'x'- and 'y'-scales
@@ -250,6 +252,18 @@ setScale :: Float -- ^ The minimum value of the 'x'- and 'y'-scales
 setScale min max = do
   setXscale min max
   setYscale min max
+
+-- | Private helper
+updateScale :: DrawApp ()
+updateScale = do
+  minX <- gets xmin
+  maxX <- gets xmax
+  minY <- gets ymin
+  maxY <- gets ymax
+  liftIO $ do
+    GL.matrixMode $= GL.Projection
+    GL.loadIdentity
+    GL.ortho (realToFrac minX) (realToFrac maxX) (realToFrac minY) (realToFrac maxY) 0 1 -- left, right, top, bottom, nearVal, farVal
 
 -- | Clears the screen to the default color (white).
 clearDefault :: DrawApp ()
