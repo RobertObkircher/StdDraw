@@ -117,7 +117,7 @@ withWindow title conf app = do
   GLFW.makeContextCurrent (Just window)
 
   keysTypedChan <- newTChanIO :: IO (TChan Char)
-  GLFW.setCharCallback window $ Just (charCallback keysTypedChan)
+  GLFW.setCharCallback window $ Just $ \_ char -> atomically $ writeTChan keysTypedChan char
 
   forkIO pollEvents
 
@@ -128,14 +128,6 @@ pollEvents = do
   threadDelay (16 * 1000)
   GLFW.pollEvents
   pollEvents
-
-charCallback :: TChan Char -> GLFW.CharCallback
-charCallback chan _ char = atomically $ writeTChan chan char
-
-keyCallback :: TChan KeyEvent -> GLFW.KeyCallback
-keyCallback chan _ key _ GLFW.KeyState'Pressed _ = atomically $ writeTChan chan $ KeyDown key
-keyCallback chan _ key _ GLFW.KeyState'Released _ = atomically $ writeTChan chan $ KeyUp key
-keyCallback _ _ _ _ _ _ = return ()
 
 -- | Sets the canvas (drawing area) to be 512-by-512 pixels.
 -- | This also erases the current drawing and resets the coordinate system,
@@ -210,9 +202,7 @@ setDefaultYscale = do
 
 -- | Sets the 'x'-scale and 'y'-scale to be the default (between 0.0 and 1.0).
 setDefaultScale :: DrawApp ()
-setDefaultScale = do
-  setDefaultXscale
-  setDefaultYscale
+setDefaultScale = setDefaultXscale >> setDefaultYscale
 
 -- | Sets the 'x'-scale to the specified range.
 setXscale :: Double -- ^ The minimum value of the 'x'-scale
@@ -240,9 +230,7 @@ setYscale min max = do
 setScale :: Double -- ^ The minimum value of the 'x'- and 'y'-scales
          -> Double -- ^ The maximum value of the 'x'- and 'y'-scales
          -> DrawApp ()
-setScale min max = do
-  setXscale min max
-  setYscale min max
+setScale min max = setXscale min max >> setYscale min max
 
 -- | Private helper
 updateScale :: DrawApp ()
@@ -255,9 +243,7 @@ updateScale = do
 
 -- | Clears the screen to the default color (white).
 clearDefault :: DrawApp ()
-clearDefault = do
-  c <- asks defaultClearColor
-  clear c
+clearDefault = asks defaultClearColor >>= clear
 
 -- | Clears the screen to the specified color.
 clear :: Color -> DrawApp ()
@@ -267,19 +253,14 @@ clear (GL.Color3 r g b) = do
 
 -- | Returns the current pen radius.
 getPenRadius :: DrawApp Double
-getPenRadius = do
---   r <- GL.get GL.lineWidth TODO scale this value back?
-  r <- gets penRadius
-  return r
+getPenRadius = gets penRadius
 
 -- | Sets the pen size to the default size (0.002).
 -- | The pen is circular, so that lines have rounded ends, and when you set the
 -- | pen radius and draw a point, you get a circle of the specified radius.
 -- | The pen radius is not affected by coordinate scaling.
 setDefaultPenRadius :: DrawApp ()
-setDefaultPenRadius = do
-  r <- asks defaultPenRadius
-  setPenRadius r
+setDefaultPenRadius = asks defaultPenRadius >>= setPenRadius
 
 -- | Sets the radius of the pen to the specified size.
 -- | The pen is circular, so that lines have rounded ends, and when you set the
@@ -295,15 +276,11 @@ setPenRadius r = do
 
 -- | Returns the current pen color.
 getPenColor :: DrawApp Color
-getPenColor = do
-  c <- gets penColor
-  return c
+getPenColor = gets penColor
 
 -- | Set the pen color to the default color (black).
 setDefaultPenColor :: DrawApp ()
-setDefaultPenColor = do
-  c <- asks defaultPenColor
-  setPenColor c
+setDefaultPenColor = asks defaultPenColor >>= setPenColor
 
 -- | Sets the pen color to the specified color.
 setPenColor :: Color -> DrawApp ()
@@ -316,25 +293,19 @@ setRGBPenColor :: GL.GLubyte -- ^ the amount of red (between 0 and 255)
                -> GL.GLubyte -- ^ the amount of green (between 0 and 255)
                -> GL.GLubyte -- ^ the amount of blue (between 0 and 255)
                -> DrawApp ()
-setRGBPenColor r g b = do
-  setPenColor $ GL.Color3 r g b
+setRGBPenColor r g b = setPenColor $ GL.Color3 r g b
 
 -- | Returns the current font.
 getFont :: DrawApp String
-getFont = do
-  f <- gets font
-  return f
+getFont = gets font
 
 -- | Sets the font to the default font (sans serif, 16 point).
 setDefaultFont :: DrawApp ()
-setDefaultFont = do
-  f <- asks defaultFont
-  setFont f
+setDefaultFont = asks defaultFont >>= setFont
 
 -- | Sets the font to the specified value.
 setFont :: String -> DrawApp ()
-setFont f = do
-  modify (\s -> s {font = f})
+setFont f = modify (\s -> s {font = f})
 
 -- | Draws a line segment between ('x0', 'y0') and ('x1', 'y1').
 line :: Double -- ^ x0 the 'x'-coordinate of one endpoint
@@ -342,17 +313,15 @@ line :: Double -- ^ x0 the 'x'-coordinate of one endpoint
      -> Double -- ^ x1 the 'x'-coordinate of the other endpoint
      -> Double -- ^ y1 the 'y'-coordinate of the other endpoint
      -> DrawApp ()
-line x0 y0 x1 y1 = do
-  liftIO $ GL.renderPrimitive GL.Lines $ do
-    GL.vertex $ vertex3 (x0, y0)
-    GL.vertex $ vertex3 (x1, y1)
+line x0 y0 x1 y1 = liftIO $ GL.renderPrimitive GL.Lines $ do
+  GL.vertex $ vertex3 (x0, y0)
+  GL.vertex $ vertex3 (x1, y1)
 
 -- | Draws a connected line
 lineStrip :: [(Double, Double)] -- Each pair represents an ('x', 'y') coordinate
           -> DrawApp ()
-lineStrip xys = do
-  let v3s = fmap vertex3 xys
-  liftIO $ GL.renderPrimitive GL.LineStrip $ mapM_ GL.vertex v3s
+lineStrip xys = let v3s = fmap vertex3 xys
+  in liftIO $ GL.renderPrimitive GL.LineStrip $ mapM_ GL.vertex v3s
 
 -- | Draws one pixel at ('x', 'y').
 -- | This method is private because pixels depend on the display.
@@ -369,9 +338,7 @@ pixel x y = undefined
 point :: Double -- ^the 'x'-coordinate of the point
       -> Double -- ^the 'y'-coordinate of the point
       -> DrawApp()
-point x y = do
-  r <- gets penRadius
-  filledCircle x y r
+point x y = gets penRadius >>= filledCircle x y
 
 -- | Draws a circle of the specified radius, centered at ('x', 'y').
 circle :: Double -- ^ the 'x'-coordinate of the center of the circle
@@ -468,8 +435,7 @@ filledRectangle x y hw hh =
 polygon :: [Double] -- ^ x an array of all the 'x'-coordinates of the polygon
         -> [Double] -- ^ y an array of all the 'y'-coordinates of the polygon
         -> DrawApp ()
-polygon xs ys = do
-  liftIO $ GL.renderPrimitive GL.LineLoop $ mapM_ GL.vertex $ verticesUnsafe xs ys
+polygon xs ys = liftIO $ GL.renderPrimitive GL.LineLoop $ mapM_ GL.vertex $ verticesUnsafe xs ys
 
 -- | Draws a polygon with the vertices
 -- |   ('x0', 'y0),
@@ -478,8 +444,7 @@ polygon xs ys = do
 filledPolygon :: [Double] -- ^ x an array of all the 'x'-coordinates of the polygon
               -> [Double] -- ^ y an array of all the 'y'-coordinates of the polygon
               -> DrawApp ()
-filledPolygon xs ys = do
-  liftIO $ GL.renderPrimitive GL.Polygon $ mapM_ GL.vertex $ verticesUnsafe xs ys
+filledPolygon xs ys = liftIO $ GL.renderPrimitive GL.Polygon $ mapM_ GL.vertex $ verticesUnsafe xs ys
 
 --     // get an image from the given filename
 --     private static Image getImage(String filename) {
@@ -708,16 +673,12 @@ filledPolygon xs ys = do
 -- | Pause for t milliseconds. This method is intended to support computer animations.
 pause :: Int -- ^ number of milliseconds
       -> DrawApp ()
-pause t = do
-  liftIO $ threadDelay (t * 1000)
+pause t = liftIO $ threadDelay (t * 1000)
 
 -- | Copies offscreen buffer to onscreen buffer. There is no reason to call
 -- | this method unless double buffering is enabled.
 showBuffer :: DrawApp ()
-showBuffer = do
-  w <- gets window
-  liftIO $ GLFW.swapBuffers w
-
+showBuffer = gets window >>= liftIO . GLFW.swapBuffers
 
 privateShow :: DrawApp ()
 privateShow = do
@@ -729,16 +690,14 @@ privateShow = do
 -- | and {@code square()} will be deffered until the next call
 -- | to show(). Useful for animations.
 enableDoubleBuffering :: DrawApp ()
-enableDoubleBuffering = do
-  modify (\s -> s { defer = True })
+enableDoubleBuffering = modify (\s -> s { defer = True })
 
 -- | Disable double buffering. All subsequent calls to
 -- | drawing methods such as {@code line()}, {@code circle()},
 -- | and {@code square()} will be displayed on screen when called.
 -- | This is the default.
 disableDoubleBuffering :: DrawApp ()
-disableDoubleBuffering = do
-  modify (\s -> s { defer = False })
+disableDoubleBuffering = modify (\s -> s { defer = False })
 
 -- | Saves the drawing to using the specified filename.
 -- | The supported image formats are JPEG and PNG;
@@ -893,4 +852,3 @@ isKeyPressed k = do
   w <- gets window
   state <- liftIO $ GLFW.getKey w k
   return $ state /= GLFW.KeyState'Released
-
