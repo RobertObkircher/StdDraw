@@ -65,9 +65,6 @@ data DrawState = DrawState
   , xmax         :: Float
   , ymax         :: Float
   , font         :: String
-  , mousePressed :: Bool
-  , mouseX       :: Float
-  , mouseY       :: Float
   , keysTyped    :: TChan Char
   , keysDown     :: [GLFW.Key] -- set of key codes currently pressed down
   , keyEvents    :: TChan KeyEvent
@@ -87,9 +84,6 @@ makeState DrawConfig {..} keysTypedChan keyEventsChan w =
     , xmax = defaultXMax
     , ymax = defaultYMax
     , font = defaultFont
-    , mousePressed = False
-    , mouseX = 0
-    , mouseY = 0
     , keysTyped = keysTypedChan
     , keysDown = []
     , keyEvents = keyEventsChan
@@ -128,12 +122,13 @@ withWindow title conf app = do
   keyEventsChan <- newTChanIO :: IO (TChan KeyEvent)
   GLFW.setKeyCallback window $ Just (keyCallback keyEventsChan)
 
-  forkIO $ pollEvents
+  forkIO pollEvents
 
   ((), state) <- runDrawApp app conf keysTypedChan keyEventsChan window
   GLFW.terminate
 
 pollEvents = do
+  threadDelay (16 * 1000)
   GLFW.pollEvents
   pollEvents
 
@@ -816,21 +811,27 @@ disableFloatBuffering = do
 -- | Returns true if the mouse is being pressed.
 isMousePressed :: DrawApp Bool
 isMousePressed = do
-  p <- gets mousePressed
-  return p
-
+  w <- gets window
+  state <- liftIO $ GLFW.getMouseButton w GLFW.MouseButton'1
+  return $ state == GLFW.MouseButtonState'Pressed
 
 -- | Returns the 'x'-coordinate of the mouse.
-getMouseX :: DrawApp Float
-getMouseX = do
-  x <- gets mouseX
-  return x
+mouseX :: DrawApp Float
+mouseX = fmap fst mouse
 
 -- | Returns the 'y'-coordinate of the mouse.
-getMouseY :: DrawApp Float
-getMouseY = do
-  y <- gets mouseY
-  return y
+mouseY :: DrawApp Float
+mouseY = fmap snd mouse
+
+mouse :: DrawApp (Float, Float)
+mouse = do
+  DrawState {window, xmin, xmax, ymin, ymax, width, height} <- get
+  (dx, dy) <- liftIO $ GLFW.getCursorPos window
+  let x = realToFrac dx
+      y = realToFrac dy
+      w = fromIntegral width
+      h = fromIntegral height
+  return (xmin + x * (xmax - xmin) / w, ymax - y * (ymax - ymin) / h)
 
 --     /**
 --      * This method cannot be called directly.

@@ -22,8 +22,17 @@ draw = do
     setDefaultPenColor
 
     test
+    testMouse
 
     showBuffer
+
+testMouse :: DrawApp ()
+testMouse = do
+  p <- isMousePressed
+  when p $ do
+    filledCircle 0 0 0.06
+    (x, y) <- mouse
+    filledCircle x y 0.04
 
 test :: DrawApp ()
 test = do
