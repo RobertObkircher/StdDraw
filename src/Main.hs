@@ -3,6 +3,7 @@ module Main where
 import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Default
+import qualified Graphics.UI.GLFW       as GLFW
 import           StdDraw
 import           StdDraw.Colors
 import           System.IO
@@ -23,6 +24,7 @@ draw = do
 
     test
     testMouse
+    testKey
 
     showBuffer
 
@@ -33,6 +35,11 @@ testMouse = do
     filledCircle 0 0 0.06
     (x, y) <- mouse
     filledCircle x y 0.04
+
+testKey :: DrawApp ()
+testKey = do
+  k <- isKeyPressed GLFW.Key'A
+  when k $ square 0 0 0.3
 
 test :: DrawApp ()
 test = do

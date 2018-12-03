@@ -55,24 +55,22 @@ instance Default DrawConfig where
       }
 
 data DrawState = DrawState
-  { width        :: Int
-  , height       :: Int
-  , penColor     :: Color
-  , penRadius    :: Float
-  , defer        :: Bool -- show we draw immediately or wait until next show?
-  , xmin         :: Float
-  , ymin         :: Float
-  , xmax         :: Float
-  , ymax         :: Float
-  , font         :: String
-  , keysTyped    :: TChan Char
-  , keysDown     :: [GLFW.Key] -- set of key codes currently pressed down
-  , keyEvents    :: TChan KeyEvent
-  , window       :: GLFW.Window
+  { width     :: Int
+  , height    :: Int
+  , penColor  :: Color
+  , penRadius :: Float
+  , defer     :: Bool -- show we draw immediately or wait until next show?
+  , xmin      :: Float
+  , ymin      :: Float
+  , xmax      :: Float
+  , ymax      :: Float
+  , font      :: String
+  , keysTyped :: TChan Char
+  , window    :: GLFW.Window
   }
 
-makeState :: DrawConfig -> TChan Char -> TChan KeyEvent -> GLFW.Window -> DrawState
-makeState DrawConfig {..} keysTypedChan keyEventsChan w =
+makeState :: DrawConfig -> TChan Char -> GLFW.Window -> DrawState
+makeState DrawConfig {..} keysTypedChan w =
   DrawState
     { width = defaultSize
     , height = defaultSize
@@ -85,8 +83,6 @@ makeState DrawConfig {..} keysTypedChan keyEventsChan w =
     , ymax = defaultYMax
     , font = defaultFont
     , keysTyped = keysTypedChan
-    , keysDown = []
-    , keyEvents = keyEventsChan
     , window = w
     }
 
@@ -100,9 +96,9 @@ newtype DrawApp a = DrawApp
              , Applicative
              )
 
-runDrawApp :: DrawApp a -> DrawConfig -> TChan Char -> TChan KeyEvent -> GLFW.Window -> IO (a, DrawState)
-runDrawApp app config keysTypedChan keyEventsChan window =
-  let state = makeState config keysTypedChan keyEventsChan window
+runDrawApp :: DrawApp a -> DrawConfig -> TChan Char -> GLFW.Window -> IO (a, DrawState)
+runDrawApp app config keysTypedChan window =
+  let state = makeState config keysTypedChan window
    in runStateT (runReaderT (runApp app) config) state
 
 withWindow :: String
@@ -119,12 +115,9 @@ withWindow title conf app = do
   keysTypedChan <- newTChanIO :: IO (TChan Char)
   GLFW.setCharCallback window $ Just (charCallback keysTypedChan)
 
-  keyEventsChan <- newTChanIO :: IO (TChan KeyEvent)
-  GLFW.setKeyCallback window $ Just (keyCallback keyEventsChan)
-
   forkIO pollEvents
 
-  ((), state) <- runDrawApp app conf keysTypedChan keyEventsChan window
+  ((), state) <- runDrawApp app conf keysTypedChan window
   GLFW.terminate
 
 pollEvents = do
@@ -181,9 +174,8 @@ initState :: DrawApp ()
 initState = do
   makeNewState <- asks makeState
   kt <- gets keysTyped
-  ke <- gets keyEvents
   w <- gets window
-  put $ makeNewState kt ke w
+  put $ makeNewState kt w
 
 -- JMenuBar menuBar = new JMenuBar();
 -- JMenu menu = new JMenu("File");
@@ -901,33 +893,7 @@ nextKeyTyped = do
 isKeyPressed :: GLFW.Key -- ^ the key to check if it is being pressed
              -> DrawApp Bool
 isKeyPressed k = do
-  keys <- gets keysDown
-
-  return $ k `elem` keys
-
-
--- | This method cannot be called directly.
-readPressedKeys :: TChan KeyEvent -> DrawApp ()
-readPressedKeys chan = do
-  k <- liftIO $ atomically $ tryReadTChan chan
-  case k of
-   Just e -> do
-    keyEvent e
-    readPressedKeys chan
-
--- | This method cannot be called directly.
-keyEvent :: KeyEvent -> DrawApp ()
-keyEvent (KeyUp k)   = keyReleased k
-keyEvent (KeyDown k) = keyPressed k
-
--- | This method cannot be called directly.
-keyPressed :: GLFW.Key -> DrawApp ()
-keyPressed keycode = do
-  modify (\s -> s {keysDown = keycode : (keysDown s)})
-
--- | This method cannot be called directly.
-keyReleased :: GLFW.Key -> DrawApp ()
-keyReleased keycode = do
-  modify (\s -> s {keysDown = filter (/= keycode) (keysDown s)})
-
+  w <- gets window
+  state <- liftIO $ GLFW.getKey w k
+  return $ state /= GLFW.KeyState'Released
 
