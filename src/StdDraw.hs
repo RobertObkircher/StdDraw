@@ -21,6 +21,8 @@ import qualified Graphics.UI.GLFW          as GLFW
 
 import           StdDraw.Colors
 import           StdDraw.Util
+import           System.IO                 (BufferMode (LineBuffering),
+                                            hSetBuffering, stdout)
 
 type Color = GL.Color3 GL.GLubyte
 
@@ -106,6 +108,8 @@ withWindow :: String
            -> DrawApp ()
            -> IO ()
 withWindow title conf app = do
+  hSetBuffering stdout LineBuffering
+
   True <- GLFW.init
 
   let a = defaultSize conf

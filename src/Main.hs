@@ -16,7 +16,6 @@ conf = def
 
 draw :: DrawApp ()
 draw = do
-  liftIO $ hSetBuffering stdout LineBuffering
   setDefaultCanvasSize
   forever $ do
     clearDefault
