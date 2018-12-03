@@ -6,10 +6,11 @@ import           Data.Default
 import qualified Graphics.UI.GLFW       as GLFW
 import           StdDraw
 import           StdDraw.Colors
-import           System.IO
+import qualified UE4A2                  as UE
 
 main :: IO ()
-main = withWindow "Hello, world!" conf draw
+-- main = withWindow "Hello, world!" conf draw
+main = UE.main
 
 conf :: DrawConfig
 conf = def
