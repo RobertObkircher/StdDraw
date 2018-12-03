@@ -30,12 +30,12 @@ data DrawConfig = DrawConfig
   { defaultPenColor   :: Color
   , defaultClearColor :: Color
   , defaultSize       :: Int
-  , defaultPenRadius  :: Float
-  , border            :: Float -- boundary of drawing canvas, 0% border
-  , defaultXMin       :: Float
-  , defaultXMax       :: Float
-  , defaultYMin       :: Float
-  , defaultYMax       :: Float
+  , defaultPenRadius  :: Double
+  , border            :: Double -- boundary of drawing canvas, 0% border
+  , defaultXMin       :: Double
+  , defaultXMax       :: Double
+  , defaultYMin       :: Double
+  , defaultYMax       :: Double
   , defaultFont       :: String -- TODO Font("SansSerif", Font.PLAIN, 16)
   }
 
@@ -58,12 +58,12 @@ data DrawState = DrawState
   { width     :: Int
   , height    :: Int
   , penColor  :: Color
-  , penRadius :: Float
+  , penRadius :: Double
   , defer     :: Bool -- show we draw immediately or wait until next show?
-  , xmin      :: Float
-  , ymin      :: Float
-  , xmax      :: Float
-  , ymax      :: Float
+  , xmin      :: Double
+  , ymin      :: Double
+  , xmax      :: Double
+  , ymax      :: Double
   , font      :: String
   , keysTyped :: TChan Char
   , window    :: GLFW.Window
@@ -211,8 +211,8 @@ setDefaultScale = do
   setDefaultYscale
 
 -- | Sets the 'x'-scale to the specified range.
-setXscale :: Float -- ^ The minimum value of the 'x'-scale
-          -> Float -- ^ The maximum value of the 'x'-scale
+setXscale :: Double -- ^ The minimum value of the 'x'-scale
+          -> Double -- ^ The maximum value of the 'x'-scale
           -> DrawApp ()
 setXscale min max = do
   let size = max - min
@@ -222,8 +222,8 @@ setXscale min max = do
   updateScale
 
 -- | Sets the 'y'-scale to the specified range.
-setYscale :: Float -- ^ The minimum value of the 'y'-scale
-          -> Float -- ^ The maximum value of the 'y'-scale
+setYscale :: Double -- ^ The minimum value of the 'y'-scale
+          -> Double -- ^ The maximum value of the 'y'-scale
           -> DrawApp ()
 setYscale min max = do
   let size = max - min
@@ -233,8 +233,8 @@ setYscale min max = do
   updateScale
 
 -- | Sets both the 'x'-scale and the 'y'-scale to the (same) specified range.
-setScale :: Float -- ^ The minimum value of the 'x'- and 'y'-scales
-         -> Float -- ^ The maximum value of the 'x'- and 'y'-scales
+setScale :: Double -- ^ The minimum value of the 'x'- and 'y'-scales
+         -> Double -- ^ The maximum value of the 'x'- and 'y'-scales
          -> DrawApp ()
 setScale min max = do
   setXscale min max
@@ -243,14 +243,11 @@ setScale min max = do
 -- | Private helper
 updateScale :: DrawApp ()
 updateScale = do
-  minX <- gets xmin
-  maxX <- gets xmax
-  minY <- gets ymin
-  maxY <- gets ymax
+  DrawState{xmin, xmax, ymin, ymax} <- get
   liftIO $ do
     GL.matrixMode $= GL.Projection
     GL.loadIdentity
-    GL.ortho (realToFrac minX) (realToFrac maxX) (realToFrac minY) (realToFrac maxY) 0 1 -- left, right, top, bottom, nearVal, farVal
+    GL.ortho xmin xmax ymin ymax 0 1 -- left, right, top, bottom, nearVal, farVal
 
 -- | Clears the screen to the default color (white).
 clearDefault :: DrawApp ()
@@ -265,7 +262,7 @@ clear (GL.Color3 r g b) = do
   liftIO $ GL.clear [GL.ColorBuffer]
 
 -- | Returns the current pen radius.
-getPenRadius :: DrawApp Float
+getPenRadius :: DrawApp Double
 getPenRadius = do
 --   r <- GL.get GL.lineWidth TODO scale this value back?
   r <- gets penRadius
@@ -284,12 +281,12 @@ setDefaultPenRadius = do
 -- | The pen is circular, so that lines have rounded ends, and when you set the
 -- | pen radius and draw a point, you get a circle of the specified radius.
 -- | The pen radius is not affected by coordinate scaling.
-setPenRadius :: Float -- ^ the radius of the pen
+setPenRadius :: Double -- ^ the radius of the pen
              -> DrawApp ()
 setPenRadius r = do
   when (r < 0) $ error "pen radius must be nonnegative"
   d <- asks defaultPenRadius -- TODO scale by screen size
-  GL.lineWidth $= (r / d)
+  GL.lineWidth $= realToFrac (r / d)
   modify (\s -> s {penRadius = r})
 
 -- | Returns the current pen color.
@@ -336,10 +333,10 @@ setFont f = do
   modify (\s -> s {font = f})
 
 -- | Draws a line segment between ('x0', 'y0') and ('x1', 'y1').
-line :: Float -- ^ x0 the 'x'-coordinate of one endpoint
-     -> Float -- ^ y0 the 'y'-coordinate of one endpoint
-     -> Float -- ^ x1 the 'x'-coordinate of the other endpoint
-     -> Float -- ^ y1 the 'y'-coordinate of the other endpoint
+line :: Double -- ^ x0 the 'x'-coordinate of one endpoint
+     -> Double -- ^ y0 the 'y'-coordinate of one endpoint
+     -> Double -- ^ x1 the 'x'-coordinate of the other endpoint
+     -> Double -- ^ y1 the 'y'-coordinate of the other endpoint
      -> DrawApp ()
 line x0 y0 x1 y1 = do
   liftIO $ GL.renderPrimitive GL.Lines $ do
@@ -347,7 +344,7 @@ line x0 y0 x1 y1 = do
     GL.vertex $ vertex3 (x1, y1)
 
 -- | Draws a connected line
-lineStrip :: [(Float, Float)] -- Each pair represents an ('x', 'y') coordinate
+lineStrip :: [(Double, Double)] -- Each pair represents an ('x', 'y') coordinate
           -> DrawApp ()
 lineStrip xys = do
   let v3s = fmap vertex3 xys
@@ -357,41 +354,41 @@ lineStrip xys = do
 -- | This method is private because pixels depend on the display.
 -- | To achieve the same effect, set the pen radius to 0 and call 'point'.
 --         offscreen.fillRect((int) Math.round(scaleX(x)), (int) Math.round(scaleY(y)), 1, 1);
-pixel :: Float -- ^ the 'x'-coordinate of the pixel
-      -> Float -- ^ the 'y'-coordinate of the pixel
+pixel :: Double -- ^ the 'x'-coordinate of the pixel
+      -> Double -- ^ the 'y'-coordinate of the pixel
       -> DrawApp()
 pixel x y = undefined
 
 -- | Draws a point centered at ('x', 'y').
 -- | The point is a filled circle whose radius is equal to the pen radius.
 -- | To draw a single-pixel point, first set the pen radius to 0.
-point :: Float -- ^the 'x'-coordinate of the point
-      -> Float -- ^the 'y'-coordinate of the point
+point :: Double -- ^the 'x'-coordinate of the point
+      -> Double -- ^the 'y'-coordinate of the point
       -> DrawApp()
 point x y = do
   r <- gets penRadius
   filledCircle x y r
 
 -- | Draws a circle of the specified radius, centered at ('x', 'y').
-circle :: Float -- ^ the 'x'-coordinate of the center of the circle
-       -> Float -- ^ the 'y'-coordinate of the center of the circle
-       -> Float -- ^ radius the radius of the circle
+circle :: Double -- ^ the 'x'-coordinate of the center of the circle
+       -> Double -- ^ the 'y'-coordinate of the center of the circle
+       -> Double -- ^ radius the radius of the circle
        -> DrawApp ()
 circle x y r = ellipse x y r r
 
 -- | Draws a filled circle of the specified radius, centered at ('x', 'y').
-filledCircle :: Float -- ^ the 'x'-coordinate of the center of the circle
-             -> Float -- ^ the 'y'-coordinate of the center of the circle
-             -> Float -- ^ radius the radius of the circle
+filledCircle :: Double -- ^ the 'x'-coordinate of the center of the circle
+             -> Double -- ^ the 'y'-coordinate of the center of the circle
+             -> Double -- ^ radius the radius of the circle
              -> DrawApp ()
 filledCircle x y r = filledEllipse x y r r
 
 -- | Draws an ellipse with the specified semimajor and semiminor axes,
 -- | centered at ('x', 'y').
-ellipse :: Float -- ^ the 'x'-coordinate of the center of the ellipse
-        -> Float -- ^ the 'y'-coordinate of the center of the ellipse
-        -> Float -- ^ semiMajorAxis is the semimajor axis of the ellipse
-        -> Float -- ^ semiMinorAxis is the semiminor axis of the ellipse
+ellipse :: Double -- ^ the 'x'-coordinate of the center of the ellipse
+        -> Double -- ^ the 'y'-coordinate of the center of the ellipse
+        -> Double -- ^ semiMajorAxis is the semimajor axis of the ellipse
+        -> Double -- ^ semiMinorAxis is the semiminor axis of the ellipse
         -> DrawApp ()
 ellipse x y semiMajorAxis semiMinorAxis =
   let (xs, ys) = unzip (ellipseVertices x y semiMajorAxis semiMinorAxis)
@@ -399,10 +396,10 @@ ellipse x y semiMajorAxis semiMinorAxis =
 
 -- | Draws an ellipse with the specified semimajor and semiminor axes,
 -- | centered at ('x', 'y').
-filledEllipse :: Float -- ^ the 'x'-coordinate of the center of the ellipse
-        -> Float -- ^ the 'y'-coordinate of the center of the ellipse
-        -> Float -- ^ semiMajorAxis is the semimajor axis of the ellipse
-        -> Float -- ^ semiMinorAxis is the semiminor axis of the ellipse
+filledEllipse :: Double -- ^ the 'x'-coordinate of the center of the ellipse
+        -> Double -- ^ the 'y'-coordinate of the center of the ellipse
+        -> Double -- ^ semiMajorAxis is the semimajor axis of the ellipse
+        -> Double -- ^ semiMinorAxis is the semiminor axis of the ellipse
         -> DrawApp ()
 filledEllipse x y semiMajorAxis semiMinorAxis =
   let (xs, ys) = unzip (ellipseVertices x y semiMajorAxis semiMinorAxis)
@@ -410,11 +407,11 @@ filledEllipse x y semiMajorAxis semiMinorAxis =
 
 -- | Draws a circular arc of the specified radius,
 -- | centered at ('x', 'y'), from angle1 to angle2 (in degrees).
-arc :: Float -- ^ the 'x'-coordinate of the center of the circle
-    -> Float -- ^ the 'y'-coordinate of the center of the circle
-    -> Float -- ^ radius the radius of the circle
-    -> Float -- ^ angle1 the starting angle. 0 would mean an arc beginning at 3 o'clock.
-    -> Float -- ^ angle2 the angle at the end of the arc. For example, if you want a 90 degree arc, then angle2 should be angle1 + 90.
+arc :: Double -- ^ the 'x'-coordinate of the center of the circle
+    -> Double -- ^ the 'y'-coordinate of the center of the circle
+    -> Double -- ^ radius the radius of the circle
+    -> Double -- ^ angle1 the starting angle. 0 would mean an arc beginning at 3 o'clock.
+    -> Double -- ^ angle2 the angle at the end of the arc. For example, if you want a 90 degree arc, then angle2 should be angle1 + 90.
     -> DrawApp ()
 arc x y r angle1 angle2 = do
   let a1 = mod2pi $ degToRad angle1
@@ -427,34 +424,34 @@ arc x y r angle1 angle2 = do
     circleVertex angle = (x + r * (cos angle), y + r * (sin angle))
 
 -- | Draws a square of side length 2r, centered at ('x', 'y').
-square :: Float -- ^ the 'x'-coordinate of the center of the square
-       -> Float -- ^ the 'y'-coordinate of the center of the square
-       -> Float -- ^ halfLength one half the length of any side of the square
+square :: Double -- ^ the 'x'-coordinate of the center of the square
+       -> Double -- ^ the 'y'-coordinate of the center of the square
+       -> Double -- ^ halfLength one half the length of any side of the square
        -> DrawApp ()
 square x y halfLength = rectangle x y halfLength halfLength
 
 -- | Draws a filled square of the specified size, centered at ('x', 'y').
-filledSquare :: Float -- ^ the 'x'-coordinate of the center of the square
-             -> Float -- ^ the 'y'-coordinate of the center of the square
-             -> Float -- ^ halfLength one half the length of any side of the square
+filledSquare :: Double -- ^ the 'x'-coordinate of the center of the square
+             -> Double -- ^ the 'y'-coordinate of the center of the square
+             -> Double -- ^ halfLength one half the length of any side of the square
              -> DrawApp ()
 filledSquare x y halfLength = filledRectangle x y halfLength halfLength
 
 -- | Draws a rectangle of the specified size, centered at ('x', 'y').
-rectangle :: Float -- ^ the 'x'-coordinate of the center of the rectangle
-          -> Float -- ^ the 'y'-coordinate of the center of the rectangle
-          -> Float -- ^ halfWidth one half the width of the rectangle
-          -> Float -- ^ halfHeight one half the height of the rectangle
+rectangle :: Double -- ^ the 'x'-coordinate of the center of the rectangle
+          -> Double -- ^ the 'y'-coordinate of the center of the rectangle
+          -> Double -- ^ halfWidth one half the width of the rectangle
+          -> Double -- ^ halfHeight one half the height of the rectangle
           -> DrawApp ()
 rectangle x y hw hh =
   -- TODO draw pixel if very small...
   polygon [x - hw, x - hw, x + hw, x + hw] [y + hh, y - hh, y - hh, y + hh]
 
 -- | Draws a filled rectangle of the specified size, centered at ('x', 'y').
-filledRectangle :: Float -- ^ the 'x'-coordinate of the center of the rectangle
-                -> Float -- ^ the 'y'-coordinate of the center of the rectangle
-                -> Float -- ^ halfWidth one half the width of the rectangle
-                -> Float -- ^ halfHeight one half the height of the rectangle
+filledRectangle :: Double -- ^ the 'x'-coordinate of the center of the rectangle
+                -> Double -- ^ the 'y'-coordinate of the center of the rectangle
+                -> Double -- ^ halfWidth one half the width of the rectangle
+                -> Double -- ^ halfHeight one half the height of the rectangle
                 -> DrawApp ()
 filledRectangle x y hw hh =
   -- TODO draw pixel if very small...
@@ -464,8 +461,8 @@ filledRectangle x y hw hh =
 -- |   ('x0', 'y0),
 -- |   ('x1', 'y1), ...,
 -- |   ('xn', 'yn).
-polygon :: [Float] -- ^ x an array of all the 'x'-coordinates of the polygon
-        -> [Float] -- ^ y an array of all the 'y'-coordinates of the polygon
+polygon :: [Double] -- ^ x an array of all the 'x'-coordinates of the polygon
+        -> [Double] -- ^ y an array of all the 'y'-coordinates of the polygon
         -> DrawApp ()
 polygon xs ys = do
   liftIO $ GL.renderPrimitive GL.LineLoop $ mapM_ GL.vertex $ verticesUnsafe xs ys
@@ -474,8 +471,8 @@ polygon xs ys = do
 -- |   ('x0', 'y0),
 -- |   ('x1', 'y1), ...,
 -- |   ('xn', 'yn).
-filledPolygon :: [Float] -- ^ x an array of all the 'x'-coordinates of the polygon
-              -> [Float] -- ^ y an array of all the 'y'-coordinates of the polygon
+filledPolygon :: [Double] -- ^ x an array of all the 'x'-coordinates of the polygon
+              -> [Double] -- ^ y an array of all the 'y'-coordinates of the polygon
               -> DrawApp ()
 filledPolygon xs ys = do
   liftIO $ GL.renderPrimitive GL.Polygon $ mapM_ GL.vertex $ verticesUnsafe xs ys
@@ -727,16 +724,16 @@ privateShow = do
 -- | drawing methods such as {@code line()}, {@code circle()},
 -- | and {@code square()} will be deffered until the next call
 -- | to show(). Useful for animations.
-enableFloatBuffering :: DrawApp ()
-enableFloatBuffering = do
+enableDoubleBuffering :: DrawApp ()
+enableDoubleBuffering = do
   modify (\s -> s { defer = True })
 
 -- | Disable double buffering. All subsequent calls to
 -- | drawing methods such as {@code line()}, {@code circle()},
 -- | and {@code square()} will be displayed on screen when called.
 -- | This is the default.
-disableFloatBuffering :: DrawApp ()
-disableFloatBuffering = do
+disableDoubleBuffering :: DrawApp ()
+disableDoubleBuffering = do
   modify (\s -> s { defer = False })
 
 -- | Saves the drawing to using the specified filename.
@@ -808,22 +805,18 @@ isMousePressed = do
   return $ state == GLFW.MouseButtonState'Pressed
 
 -- | Returns the 'x'-coordinate of the mouse.
-mouseX :: DrawApp Float
+mouseX :: DrawApp Double
 mouseX = fmap fst mouse
 
 -- | Returns the 'y'-coordinate of the mouse.
-mouseY :: DrawApp Float
+mouseY :: DrawApp Double
 mouseY = fmap snd mouse
 
-mouse :: DrawApp (Float, Float)
+mouse :: DrawApp (Double, Double)
 mouse = do
   DrawState {window, xmin, xmax, ymin, ymax, width, height} <- get
-  (dx, dy) <- liftIO $ GLFW.getCursorPos window
-  let x = realToFrac dx
-      y = realToFrac dy
-      w = fromIntegral width
-      h = fromIntegral height
-  return (xmin + x * (xmax - xmin) / w, ymax - y * (ymax - ymin) / h)
+  (x, y) <- liftIO $ GLFW.getCursorPos window
+  return (xmin + x * (xmax - xmin) / (fromIntegral width), ymax - y * (ymax - ymin) / (fromIntegral height))
 
 --     /**
 --      * This method cannot be called directly.
